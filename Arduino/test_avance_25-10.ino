@@ -19,8 +19,8 @@
 #define AC1 2 // D4
 #define AC2 5 // D3
 
-#define BC1 2 // D4
-#define BC2 5 // D3
+#define BC1
+#define BC2
 
 #define LED 7
 #define btn 13
@@ -33,6 +33,7 @@ int delay_time = 2000;
 float vueltas_ruedasA;
 float vueltas_ruedasB;
 float avance;
+bool enable = true;
 int PWM = 60;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
@@ -51,6 +52,7 @@ unsigned long time_ant = 0;
 unsigned long newtime;
 const int Period = 10000; // 10 ms = 100Hz
 
+// ************** Función para avanzar ***************
 void Adelante(int pwm_ref)
 {
     Serial.println("Adelante");
@@ -95,6 +97,7 @@ void Atras(int pwm_ref)
     analogWrite(PWM2, pwm_ref);
 }
 
+// ************** Función para doblar a la derecha ***************
 void Doblar_derecha(int pwm_ref)
 {
     Serial.println("Doblar Derecha");
@@ -109,6 +112,7 @@ void Doblar_derecha(int pwm_ref)
     analogWrite(PWM2, pwm_ref);
 }
 
+// ************** Función para doblar a la izquierda ***************
 void Doblar_izquierda(int pwm_ref)
 {
     Serial.println("Doblar Izquierda");
@@ -180,6 +184,7 @@ void setup()
     pinMode(BIN1, OUTPUT);
     pinMode(BIN2, OUTPUT);
     pinMode(STBY, OUTPUT);
+    pinMode(LED, OUTPUT);
 
     Adelante(PWM);
 
@@ -194,6 +199,8 @@ void setup()
     digitalWrite(BC1, HIGH);
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
+
+    pinMode(btn, INPUT_PULLUP); 
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
@@ -241,6 +248,18 @@ void loop()
         Serial.print(" cm de avance, ");
         Serial.print((float)newtime * 0.000001);
         Serial.println(" s.");
+    }
+
+    if (digitalRead(btn) == LOW) {
+        enable = !enable;
+        delay(100);
+    }
+
+    if(enable){
+        digitalWrite(LED, HIGH);
+    } else{
+        Parar()
+        digitalWrite(LED, LOW);
     }
     switch (state)
     {
