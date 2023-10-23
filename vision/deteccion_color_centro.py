@@ -6,8 +6,8 @@ cap = cv2.VideoCapture(0)
 azulBajo = np.array([100, 100, 20], np.uint8)
 azulAlto = np.array([125, 255, 255], np.uint8)
 
-verdeBajo = np.array([36, 14, 0], np.uint8)
-verdeAlto = np.array([56, 120, 255], np.uint8)
+verdeBajo = np.array([40, 50, 20], np.uint8)
+verdeAlto = np.array([70, 255, 255], np.uint8)
 
 while True:    
 
