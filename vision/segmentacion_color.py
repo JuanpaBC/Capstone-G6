@@ -15,8 +15,8 @@ cap = cv2.VideoCapture(nCam)
 color1_hsv = np.array([0,0,0])
 
 # Se definen los rangos de colores permitidos para la detección de objetos
-LowerColorError = np.array([-30,-35,-35]) 
-UpperColorError = np.array([30,35,35])  
+LowerColorError = np.array([-40,-45,-75]) 
+UpperColorError = np.array([40,45,75])  
 
 # Se inicializa la variable nClick en 1
 nClick = 1
