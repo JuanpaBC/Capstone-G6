@@ -28,6 +28,6 @@ void readSerialPort() {
 void sendData() {
   //write data
   Serial.print(nom);
-  Serial.print(" received : ");
+  Serial.print(" recibió : ");
   Serial.print(msg);
 }

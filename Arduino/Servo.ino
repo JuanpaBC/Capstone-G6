@@ -5,7 +5,7 @@ int angle = 0; // Defines an integer
 
 void setup()
 {
-    servo.attach(5);    // States that the servo is attached to pin 5
+    servo.attach(1);    // States that the servo is attached to pin 5
     servo.write(angle); // Sets the servo angle to 10degrees
 }
 
