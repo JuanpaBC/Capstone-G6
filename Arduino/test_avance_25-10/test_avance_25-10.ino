@@ -6,34 +6,34 @@
 
 */
 
-#define PWM1 11 // D6
-#define PWM2 
+#define PWMA 9 // D6
+#define PWMB 6
 
 #define STBY 8  // D2
-#define AIN1 12 // D1
-#define AIN2 4  // D0
+#define AIN1 11 // D1
+#define AIN2 10  // D0
 
-#define BIN1 
-#define BIN2
+#define BIN1 4
+#define BIN2 5
 
 #define AC1 2 // D4
-#define AC2 5 // D3
+#define AC2 3 // D3
 
-#define BC1
-#define BC2
+#define BC1 12
+#define BC2 13
 
-#define LED 7
-#define btn 13
+#define switchPin 1
 
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
 int steps = 12;
-int state = 0;
+int state = 8;
 int delay_time = 2000;
 float vueltas_ruedasA;
 float vueltas_ruedasB;
 float avance;
-bool enable = true;
+int enable = 0;
+bool pressed = true;
 int PWM = 60;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
@@ -45,26 +45,30 @@ float velA; // Velocidad del motor 0 en RPM
 long newpositionB;
 long oldpositionB = 0;
 float velB; // Velocidad del motor 0 en RPM
-
+int countdown = 5;
+int printedCountdown = -1;
 
 unsigned long ref_time = 0;
 unsigned long time_ant = 0;
 unsigned long newtime;
+unsigned long now;
 const int Period = 10000; // 10 ms = 100Hz
+//const int Debounce = 500000; // 500ms
+//unsigned long pressed_time = 0;
 
 // ************** Función para avanzar ***************
-void Adelante(int pwm_ref)
+void Avanzar(int pwm_ref)
 {
     Serial.println("Adelante");
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(PWM1, pwm_ref);
+    analogWrite(PWMA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(PWM2, pwm_ref);
+    analogWrite(PWMB, pwm_ref);
 }
 
 // ************** Función para parar ***************
@@ -74,12 +78,12 @@ void Parar()
     // Detener motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, LOW);
-    analogWrite(PWM1, 0);
+    analogWrite(PWMA, 0);
 
     // Detener motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, LOW);
-    analogWrite(PWM2, 0);
+    analogWrite(PWMB, 0);
 }
 // ************** Función para ir hacia atras ***************
 
@@ -89,12 +93,12 @@ void Atras(int pwm_ref)
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(PWM1, pwm_ref);
+    analogWrite(PWMA, pwm_ref);
 
     // Retroceder motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(PWM2, pwm_ref);
+    analogWrite(PWMB, pwm_ref);
 }
 
 // ************** Función para doblar a la derecha ***************
@@ -104,12 +108,12 @@ void Doblar_derecha(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(PWM1, pwm_ref);
+    analogWrite(PWMA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(PWM2, pwm_ref);
+    analogWrite(PWMB, pwm_ref);
 }
 
 // ************** Función para doblar a la izquierda ***************
@@ -119,12 +123,12 @@ void Doblar_izquierda(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(PWM1, pwm_ref);
+    analogWrite(PWMA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(PWM2, pwm_ref);
+    analogWrite(PWMB, pwm_ref);
 }
 
 void doEncoderA1()
@@ -177,16 +181,13 @@ void doEncoderB2()
 
 void setup()
 {
-    pinMode(PWM1, OUTPUT);
+    pinMode(PWMA, OUTPUT);
     pinMode(AIN1, OUTPUT);
     pinMode(AIN2, OUTPUT);
-    pinMode(PWM2, OUTPUT);
+    pinMode(PWMB, OUTPUT);
     pinMode(BIN1, OUTPUT);
     pinMode(BIN2, OUTPUT);
     pinMode(STBY, OUTPUT);
-    pinMode(LED, OUTPUT);
-
-    Adelante(PWM);
 
     digitalWrite(STBY, HIGH);
 
@@ -200,7 +201,7 @@ void setup()
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
 
-    pinMode(btn, INPUT_PULLUP); 
+    pinMode(switchPin, INPUT_PULLUP);
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
@@ -213,7 +214,7 @@ void setup()
 
 void loop()
 {
-    if ((micros() - time_ant) >= Period)
+    if (((micros() - time_ant) >= Period) && state != 8)
     { // Cada Period de tiempo hace el calculo
         newtime = micros();
         vueltas_ruedasA = (float)encoderAPos / (steps * ratio_ruedas);
@@ -232,11 +233,11 @@ void loop()
         float distanceB = vueltas_ruedasB * d * 3.1415 / 10;
 
         // Calculate the average linear velocity of both wheels
-        float averageLinearVelocity = (distanceA + distanceB) / 2;
+        avance = (distanceA + distanceB) / 2;
 
         time_ant = newtime;
 
-        Serial.print(vueltas_ruedasA);
+        /*Serial.print(vueltas_ruedasA);
         Serial.print(" vueltas A, ");
         Serial.print(vueltas_ruedasB);
         Serial.print(" vueltas B, ");
@@ -247,24 +248,42 @@ void loop()
         Serial.print(avance);
         Serial.print(" cm de avance, ");
         Serial.print((float)newtime * 0.000001);
-        Serial.println(" s.");
+        Serial.print(" s.");
+        Serial.print(state);
+        Serial.println(" Estado");*/
     }
 
-    if (digitalRead(btn) == LOW) {
+    //enable = digitalRead(switchPin);
+    //btnState = digitalRead(btnPin);
+
+    /*if (btnState == HIGH && !pressed) {
+        Serial.println("**Pressing**");
         enable = !enable;
-        delay(100);
+        Serial.println(enable);
+        pressed = true;
+        pressed_time = micros();
     }
 
-    if(enable){
-        digitalWrite(LED, HIGH);
+    now = micros();
+
+    if ((now - pressed_time) >= Debounce){
+      Serial.println("**Debounced**");
+      pressed = false;
+      pressed_time = 0;
+    }*/
+
+    /*if(enable == HIGH){
+      Serial.println("--Prendido--");
+      state = 0;
     } else{
-        Parar()
-        digitalWrite(LED, LOW);
-    }
+      Serial.println("--Apagado--");
+      Parar();
+      state = 7;
+    }*/
     switch (state)
     {
     case 0:
-        if (avance > 500)
+        if (avance > 20)
         {
             Parar();
             ref_time = micros();
@@ -290,24 +309,48 @@ void loop()
         break;
 
     case 3:
-        if ((micros() - ref_time) * 0.000001 > 5)
+        if ((micros() - ref_time) * 0.000001 > 3)
         {
             ref_time = micros();
             Doblar_derecha(PWM);
             state = 4;
         }
         break;
+        
     case 4:
-        if ((micros() - ref_time) * 0.000001 > 5)
+        if ((micros() - ref_time) * 0.000001 > 3)
         {
             ref_time = micros();
-            Doblar_izquierda(PWM);
+            Parar();
             state = 5;
         }
         break;
     case 5:
-        Parar();
-        state = 6;
+        if ((micros() - ref_time) * 0.000001 > 3)
+        {
+            ref_time = micros();
+            Doblar_izquierda(PWM);
+            state = 6;
+        }
+        break;
+    case 6:
+        if ((micros() - ref_time) * 0.000001 > 3)
+        {
+          Parar();
+          state = 7;
+        }
+        break;
+    case 8:
+        int c =  round(countdown - micros()* 0.000001);
+        if(c != printedCountdown){
+          Serial.println(c);
+          printedCountdown = c;
+        }
+        if ((micros()) * 0.000001 > 5)
+        {
+          Avanzar(PWM);
+          state = 0;
+        }
         break;
     default:
         break;
