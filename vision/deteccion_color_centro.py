@@ -83,7 +83,11 @@ while True:
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 cv2.putText(frame, '{},{}'.format(x, y), (x+10, y), font, 0.75, (255,0,255), 1, cv2.LINE_AA)
                 nuevoContorno = cv2.convexHull(c)
-                cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
+                cv2.circle(frame, (x,y), max(nuevoContorno[:, 0, 0].tolist()) - x, (0,0,255), 2)
+                mostrar_contorno = False
+                if mostrar_contorno:
+                    cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
+                print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
         # cv2.imshow('maskAzul', mask)
         # cv2.imshow('maskVerde', mask)
         cv2.imshow('frame', frame)
