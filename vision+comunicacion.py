@@ -48,23 +48,26 @@ def vision():
     cap.release()
     cv2.destroyAllWindows()
 
+def comunicacion():
+    with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as arduino:
+        time.sleep(0.1) #wait for serial to open
+        if arduino.isOpen():
+            print("{} conectado!".format(arduino.port))
+            try:
+                while True:
+                    cmd = input("Ingresar mensaje : ")
+                    arduino.write(cmd.encode())
+                    #time.sleep(0.1) #wait for arduino to answer
+                    while arduino.inWaiting() == 0: 
+                        pass
+                    if  arduino.inWaiting() > 0: 
+                        answer = arduino.readline()
+                        print(answer.decode())
+                        arduino.flushInput() #remove data after reading
+            except KeyboardInterrupt:
+                #print("KeyboardInterrupt has been caught.")
+                print()
+
 #vision()
 
-with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as arduino:
-    time.sleep(0.1) #wait for serial to open
-    if arduino.isOpen():
-        print("{} conectado!".format(arduino.port))
-        try:
-            while True:
-                cmd = input("Ingresar mensaje : ")
-                arduino.write(cmd.encode())
-                #time.sleep(0.1) #wait for arduino to answer
-                while arduino.inWaiting() == 0: 
-                    pass
-                if  arduino.inWaiting() > 0: 
-                    answer = arduino.readline()
-                    print(answer.decode())
-                    arduino.flushInput() #remove data after reading
-        except KeyboardInterrupt:
-            #print("KeyboardInterrupt has been caught.")
-            print()
+comunicacion()
