@@ -6,21 +6,21 @@
 
 */
 
-#define PWMA 9 // D6
-#define PWMB 6
+#define ENA 9 // D6
+#define ENB 6
 
-#define STBY 8  // D2
+//#define STBY 8  // D2
 #define AIN1 11 // D1
 #define AIN2 10  // D0
 
 #define BIN1 4
 #define BIN2 5
 
-#define AC1 2 // D4
-#define AC2 3 // D3
+#define AC1 23 // D4
+#define AC2 22 // D3
 
-#define BC1 12
-#define BC2 13
+#define BC1 13
+#define BC2 12
 
 #define switchPin 1
 
@@ -34,7 +34,7 @@ float vueltas_ruedasB;
 float avance;
 int enable = 0;
 bool pressed = true;
-int PWM = 60;
+int PWM = 250;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
 
@@ -57,18 +57,18 @@ const int Period = 10000; // 10 ms = 100Hz
 //unsigned long pressed_time = 0;
 
 // ************** Función para avanzar ***************
-void Avanzar(int pwm_ref)
+void Atras(int pwm_ref)
 {
     Serial.println("Adelante");
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(PWMA, pwm_ref);
+    analogWrite(ENA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(PWMB, pwm_ref);
+    analogWrite(ENB, pwm_ref);
 }
 
 // ************** Función para parar ***************
@@ -78,27 +78,27 @@ void Parar()
     // Detener motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, LOW);
-    analogWrite(PWMA, 0);
+    analogWrite(ENA, 0);
 
     // Detener motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, LOW);
-    analogWrite(PWMB, 0);
+    analogWrite(ENB, 0);
 }
 // ************** Función para ir hacia atras ***************
 
-void Atras(int pwm_ref)
+void Avanzar(int pwm_ref)
 {
     Serial.println("Atras");
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(PWMA, pwm_ref);
+    analogWrite(ENA, pwm_ref);
 
     // Retroceder motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(PWMB, pwm_ref);
+    analogWrite(ENB, pwm_ref);
 }
 
 // ************** Función para doblar a la derecha ***************
@@ -108,12 +108,12 @@ void Doblar_derecha(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(PWMA, pwm_ref);
+    analogWrite(ENA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(PWMB, pwm_ref);
+    analogWrite(ENB, pwm_ref);
 }
 
 // ************** Función para doblar a la izquierda ***************
@@ -123,16 +123,17 @@ void Doblar_izquierda(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(PWMA, pwm_ref);
+    analogWrite(ENA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(PWMB, pwm_ref);
+    analogWrite(ENB, pwm_ref);
 }
 
 void doEncoderA1()
 {
+    Serial.println(encoderAPos);
     if (digitalRead(AC1) == digitalRead(AC2))
     {
         encoderAPos++;
@@ -145,6 +146,7 @@ void doEncoderA1()
 
 void doEncoderA2()
 {
+    Serial.println(encoderAPos);
     if (digitalRead(AC1) == digitalRead(AC2))
     {
         encoderAPos--;
@@ -157,6 +159,7 @@ void doEncoderA2()
 
 void doEncoderB1()
 {
+    Serial.println(encoderBPos);
     if (digitalRead(BC1) == digitalRead(BC2))
     {
         encoderBPos++;
@@ -169,6 +172,7 @@ void doEncoderB1()
 
 void doEncoderB2()
 {
+    Serial.println(encoderBPos);
     if (digitalRead(BC1) == digitalRead(BC2))
     {
         encoderBPos--;
@@ -181,15 +185,12 @@ void doEncoderB2()
 
 void setup()
 {
-    pinMode(PWMA, OUTPUT);
+    pinMode(ENA, OUTPUT);
     pinMode(AIN1, OUTPUT);
     pinMode(AIN2, OUTPUT);
-    pinMode(PWMB, OUTPUT);
+    pinMode(ENB, OUTPUT);
     pinMode(BIN1, OUTPUT);
     pinMode(BIN2, OUTPUT);
-    pinMode(STBY, OUTPUT);
-
-    digitalWrite(STBY, HIGH);
 
     pinMode(AC1, INPUT_PULLUP);
     digitalWrite(AC1, HIGH);
@@ -237,6 +238,7 @@ void loop()
 
         time_ant = newtime;
 
+        Serial.println(digitalRead(AC1));
         /*Serial.print(vueltas_ruedasA);
         Serial.print(" vueltas A, ");
         Serial.print(vueltas_ruedasB);
@@ -251,6 +253,7 @@ void loop()
         Serial.print(" s.");
         Serial.print(state);
         Serial.println(" Estado");*/
+
     }
 
     //enable = digitalRead(switchPin);
@@ -304,7 +307,7 @@ void loop()
         {
             Parar();
             ref_time = micros();
-            state = 3;
+            state = 8;
         }
         break;
 
