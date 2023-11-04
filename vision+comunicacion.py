@@ -5,6 +5,8 @@ import serial,time
 
 from threading import Thread
 
+distancia = "string inicial"
+
 def vision():
     mostrar_contorno = False
 
@@ -41,7 +43,8 @@ def vision():
                     
                     if mostrar_contorno:
                         cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
-                    print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
+                    distancia = f"{x - frame.shape[1]*0.5}"
+                    print(f"Distancia con respecto al centro de la imagen: {distancia}")
             # cv2.imshow('maskAzul', mask)
             # cv2.imshow('maskVerde', mask)
             cv2.imshow('frame', frame)
@@ -50,14 +53,16 @@ def vision():
     cap.release()
     cv2.destroyAllWindows()
 
+th_v = Thread(target=vision, daemon=True)
+th_v.start()
+
 with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as arduino:
     time.sleep(0.1) #wait for serial to open
     if arduino.isOpen():
         print("{} conectado!".format(arduino.port))
         try:
             while True:
-                cmd = input("Ingresar mensaje : ")
-                arduino.write(cmd.encode())
+                arduino.write(distancia.encode())
                 #time.sleep(0.1) #wait for arduino to answer
                 while arduino.inWaiting() == 0: 
                     pass
@@ -71,6 +76,3 @@ with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as arduino:
 
 #vision()
 #comunicacion()
-
-th_v = Thread(target=vision, daemon=True)
-th_v.start()
