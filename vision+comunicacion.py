@@ -4,31 +4,28 @@ import numpy as np
 import serial,time
 
 mostrar_contorno = False
+distancia = 0
+
+arduino = serial.Serial('COM3',9600, timeout=1)
+time.sleep(0.1)
+if arduino.isOpen():
+    print("{} conectado!".format(arduino.port))
+    time.sleep(1)
 
 def comunicacion(distancia):
-    with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as arduino:
-        time.sleep(0.1) #wait for serial to open
-        if arduino.isOpen():
-            print("{} conectado!".format(arduino.port))
-            try:
-                while True:
-                    cmd = input("Ingresar mensaje : ")
-                    arduino.write(cmd.encode())
-                    #time.sleep(0.1) #wait for arduino to answer
-                    while arduino.inWaiting() == 0: 
-                        pass
-                    if  arduino.inWaiting() > 0: 
-                        answer = arduino.readline()
-                        print(answer.decode())
-                        arduino.flushInput() #remove data after reading
-            except KeyboardInterrupt:
-                #print("KeyboardInterrupt has been caught.")
-                print()
-
+    if arduino.isOpen():
+        try:
+            arduino.write(distancia.encode())
+            #time.sleep(0.1) #wait for arduino to answer
+            while arduino.inWaiting() == 0: 
+                pass
+            if  arduino.inWaiting() > 0: 
+                answer = arduino.readline()
+                print(answer.decode())
+                arduino.flushInput() #remove data after reading
 cap = cv2.VideoCapture(0)
 
 while True:
-
     lower = np.array([49, 45, 0], np.uint8)
     upper = np.array([96, 255, 255], np.uint8)
 
