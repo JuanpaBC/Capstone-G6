@@ -3,8 +3,6 @@ import numpy as np
 
 import serial,time
 
-from threading import Thread
-
 mostrar_contorno = False
 
 def comunicacion(distancia):
@@ -13,14 +11,16 @@ def comunicacion(distancia):
         if arduino.isOpen():
             print("{} conectado!".format(arduino.port))
             try:
-                arduino.write(distancia.encode())
-                #time.sleep(0.1) #wait for arduino to answer
-                while arduino.inWaiting() == 0: 
-                    pass
-                if  arduino.inWaiting() > 0: 
-                    answer = arduino.readline()
-                    print(answer.decode())
-                    arduino.flushInput() #remove data after reading
+                while True:
+                    cmd = input("Ingresar mensaje : ")
+                    arduino.write(cmd.encode())
+                    #time.sleep(0.1) #wait for arduino to answer
+                    while arduino.inWaiting() == 0: 
+                        pass
+                    if  arduino.inWaiting() > 0: 
+                        answer = arduino.readline()
+                        print(answer.decode())
+                        arduino.flushInput() #remove data after reading
             except KeyboardInterrupt:
                 #print("KeyboardInterrupt has been caught.")
                 print()
