@@ -9,7 +9,7 @@ distancia = 0
 manual_mode = False
 starts = False
 
-arduino = serial.Serial('COM3',9600, timeout=1)
+arduino = serial.Serial('/dev/ttyACM0',9600, timeout=1)
 time.sleep(0.1)
 if arduino.isOpen():
     print("{} conectado!".format(arduino.port))
