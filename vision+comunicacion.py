@@ -14,15 +14,14 @@ if arduino.isOpen():
 
 def comunicacion(distancia):
     if arduino.isOpen():
-        try:
-            arduino.write(distancia.encode())
-            #time.sleep(0.1) #wait for arduino to answer
-            while arduino.inWaiting() == 0: 
-                pass
-            if  arduino.inWaiting() > 0: 
-                answer = arduino.readline()
-                print(answer.decode())
-                arduino.flushInput() #remove data after reading
+        arduino.write(distancia.encode())
+        #time.sleep(0.1) #wait for arduino to answer
+        while arduino.inWaiting() == 0: 
+            pass
+        if  arduino.inWaiting() > 0: 
+            answer = arduino.readline()
+            print(answer.decode())
+            arduino.flushInput() #remove data after reading
 cap = cv2.VideoCapture(0)
 
 while True:
