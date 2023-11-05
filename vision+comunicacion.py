@@ -2,15 +2,20 @@ import cv2
 import numpy as np
 
 import serial,time
+import keyboard
 
 mostrar_contorno = False
 distancia = 0
+manual_mode = False
+starts = False
 
 arduino = serial.Serial('COM3',9600, timeout=1)
 time.sleep(0.1)
 if arduino.isOpen():
     print("{} conectado!".format(arduino.port))
     time.sleep(1)
+
+cap = cv2.VideoCapture(0)
 
 def comunicacion(distancia):
     if arduino.isOpen():
@@ -22,9 +27,8 @@ def comunicacion(distancia):
             answer = arduino.readline()
             print(answer.decode())
             arduino.flushInput() #remove data after reading
-cap = cv2.VideoCapture(0)
 
-while True:
+def read_distancia():
     lower = np.array([49, 45, 0], np.uint8)
     upper = np.array([96, 255, 255], np.uint8)
 
@@ -55,13 +59,34 @@ while True:
                 if mostrar_contorno:
                     cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
                 distancia = f"{x - frame.shape[1]*0.5}"
-                # print(f"Distancia con respecto al centro de la imagen: {distancia}")
+                return distancia
+    return '0'
+while True:
+    try:
+        if(manual_mode):
+            if keyboard.is_pressed('a'):
+                comunicacion('L')
+            elif keyboard.is_pressed('d'):
+                comunicacion('R')
+            elif keyboard.is_pressed('w'):
+                comunicacion('U')
+            elif keyboard.is_pressed('s'):
+                comunicacion('D')
+            elif keyboard.is_pressed('q'):
+                comunicacion('Start')
+            elif keyboard.is_pressed('e'):
+                comunicacion('Exit')
+        else:
+            if keyboard.is_pressed('q'):
+                comunicacion('Start')
+                starts = True
+            if(starts):
+                distancia = read_distancia()
                 comunicacion(distancia)
-        # cv2.imshow('maskAzul', mask)
-        # cv2.imshow('maskVerde', mask)
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) & 0xFF == ord('s'):
-            break
+                
+    except KeyboardInterrupt:
+        comunicacion('Exit')
+        break
 cap.release()
 cv2.destroyAllWindows()
 
