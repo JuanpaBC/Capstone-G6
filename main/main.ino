@@ -3,7 +3,7 @@
 #define SLP 7 // Sensor light pin
 #define SRP 2 // Sensor receptor pin
 
-#define SP 9 // Servo pin
+#define SP 8 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15
@@ -11,21 +11,28 @@
 #define ENA 9 // D6
 #define ENB 6
 
-//#define STBY 8  // D2
 #define AIN1 11 // D1
 #define AIN2 10  // D0
 
-#define BIN1 4
-#define BIN2 5
+#define BIN1 5
+#define BIN2 4
 
-#define AC1 20 // D4
-#define AC2 21 // D3
+#define AC1 21 // D4
+#define AC2 20 // D3
 
-#define BC1 18
-#define BC2 19
+#define BC1 19
+#define BC2 18
 
-#define switchPin 1
+#define IRLed 7
 
+#define redLed 51
+
+#define servoPin 8
+
+int right_pwm_value;
+int right_dir_value;
+int left_pwm_value;
+int left_dir_value;
 Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
 
@@ -34,11 +41,12 @@ String left = "L";
 String right = "R";
 String forward = "U";
 String backwards = "D";
+String scoopeSignal = "S";
 String manual = "M";
 String automatic = "N";
 
 String msg;
-bool auto_mode = false;
+bool auto_mode = true;
 
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
@@ -105,7 +113,7 @@ void Parar()
 
 void Avanzar(int pwm_ref)
 {
-    Serial.println("Adelante");
+    Serial.println("Avanzar");
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
@@ -198,6 +206,7 @@ void doEncoderB2()
 // ************** Función para mover la pala ***************
 void scoop()
 {
+    Serial.println("pala");
      // The following for loop runs till the servo is turned till 180degrees
     for (angle = MINANG; angle < MAXANG; angle++)
     {
@@ -252,6 +261,7 @@ void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, i
 }
 
 void setup() {
+    digitalWrite(redLed, LOW);
 
     pinMode(SRP, INPUT);
     attachInterrupt(digitalPinToInterrupt(SRP), scoop, FALLING);
@@ -266,6 +276,8 @@ void setup() {
     pinMode(BIN1, OUTPUT);
     pinMode(BIN2, OUTPUT);
 
+    pinMode(redLed, OUTPUT);
+   
     pinMode(AC1, INPUT_PULLUP);
     digitalWrite(AC1, HIGH);
     pinMode(AC2, INPUT_PULLUP);
@@ -275,8 +287,6 @@ void setup() {
     digitalWrite(BC1, HIGH);
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
-
-    pinMode(switchPin, INPUT_PULLUP);
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
@@ -296,16 +306,16 @@ void loop() {
   }
   else if(msg == automatic){
     auto_mode = true;
+    
   }
 
   if(auto_mode){
-    int right_pwm;
-    int right_dir;
-    int left_pwm;
-    int left_dir;
-    stringSplitter(msg, &right_pwm, &right_dir, &left_pwm, &left_dir);
+    if(msg != ""){
+      digitalWrite(redLed, HIGH);
+      stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
+    }
 
-    if(right_dir == 0){
+    if(left_dir_value == -1){
       digitalWrite(AIN1, LOW);
       digitalWrite(AIN2, HIGH);
     }
@@ -313,10 +323,10 @@ void loop() {
       digitalWrite(AIN1, HIGH);
       digitalWrite(AIN2, LOW);
     }
-    analogWrite(ENA, left_pwm);
+    analogWrite(ENA, left_pwm_value);
 
 
-    if(right_dir == 0){
+    if(right_dir_value == -1){
       digitalWrite(BIN1, LOW);
       digitalWrite(BIN2, HIGH);
     }
@@ -324,9 +334,10 @@ void loop() {
       digitalWrite(BIN1, HIGH);
       digitalWrite(BIN2, LOW);
     }
-    analogWrite(ENB, right_pwm);
+    analogWrite(ENB, right_pwm_value);
   }
   else {
+    digitalWrite(redLed, LOW);
     if(msg == forward){
       Avanzar(PWM);
     }
@@ -336,8 +347,11 @@ void loop() {
     else if(msg == left){
       Doblar_izquierda(PWM);
     }
-    else if(msg == left){
+    else if(msg == right){
       Doblar_derecha(PWM);
+    }
+    else if(msg == scoopeSignal){
+      scoop();
     }
     else if(msg == "") {
       Parar();

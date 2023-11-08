@@ -10,7 +10,6 @@
 #define ENA 9 // D6
 #define ENB 6
 
-//#define STBY 8  // D2
 #define AIN1 11 // D1
 #define AIN2 10  // D0
 
