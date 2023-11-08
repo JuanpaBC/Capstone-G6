@@ -3,7 +3,7 @@
 #define SLP 7 // Sensor light pin
 #define SRP 2 // Sensor receptor pin
 
-#define SP 9 // Servo pin
+#define SP 8 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15

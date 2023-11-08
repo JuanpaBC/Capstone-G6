@@ -6,7 +6,7 @@ import keyboard
 import threading
 
 class ColorTracker:
-    def __init__(self):
+    def _init_(self):
         self.mostrar_contorno = False
         self.setear_colores = False
         self.cap = None
@@ -116,7 +116,7 @@ class ColorTracker:
         cv2.destroyAllWindows()
 
 class Communication:
-    def __init__(self) -> None:
+    def _init_(self) -> None:
         self.mostrar_contorno = False
         self.manual_mode = True
         self.starts = False
@@ -147,46 +147,100 @@ class Communication:
     def switch_mode(self):
         self.manual_mode = not self.manual_mode
 
+
 def track_wrapper(tracker):
     # This function is used to run the track() method in a separate thread.
     tracker.track()
 
-if __name__ == '__main__':
-    tracker = ColorTracker()
-    tracker.colorSetup()
-    tracker.initiateVideo()
 
-    coms = Communication()
-    coms.begin()
+class Pid:
+    def _init_(self):
+        self.Ts = 0.2 # time sample
+        self.Kp = 7
+        self.Ki = 0.01
+        self.Kd = 0.00008
+        self.tol = 100 # tolerancia a error
+        self.min_C = 120
+        self.max_C = 255
+        self.C_lin = 200
+        
+        self.ref = 0
+        self.E = 0
+        self.E_ = 0
+        self.E__ = 0
+        self.C = 0
+        self.C_ = 0
+        self.motor_R = 0
+        self.motor_L = 0
 
-    tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
-    tracking_thread.daemon = True
-    tracking_thread.start()
+    def update(self, error):
+        self.E__ = self.E_
+        self.E_ = self.E
+        self.E = error
+        self.C_ = self.C
+        self.C = self.C_ + (self.Kp + self.Ts*self.Ki + self.Kd/self.Ts)*self.E + (-self.Kp - 2*self.Kd/self.Ts)*self.E_ + (self.Kd/self.Ts)*self.E__
+        if abs(self.C) > self.max_C:
+            self.C = np.sign(self.C) * self.max_C
+        if abs(self.C) < self.min_C:
+            self.C = np.sign(self.C) * self.min_C
 
-    running = True
-
-    while running:
-        ret, frame = tracker.cap.read()
-        if ret:
-            if (coms.manual_mode):
-                if keyboard.is_pressed('a'):
-                    coms.comunicacion('L\n')
-                elif keyboard.is_pressed('d'):
-                    coms.comunicacion('R\n')
-                elif keyboard.is_pressed('w'):
-                    coms.comunicacion('U\n')
-                elif keyboard.is_pressed('s'):
-                    coms.comunicacion('D\n')
-                elif keyboard.is_pressed('p'):
-                    coms.comunicacion('S\n')
-                elif keyboard.is_pressed('m'):
-                    coms.switch_mode()
+    def make_control(self, distancia):
+        error = float(distancia)
+        if abs(error) > self.tol:
+            self.update(error)
+            if error > 0:
+                self.motor_L = self.C
+                self.motor_R = - self.C
             else:
-                distancia = tracker.distancia
-                coms.comunicacion(distancia)
-        if keyboard.is_pressed('x'):
-            running = False
-            print("Stopped")
-    
-    tracker.stop_tracking()
-    tracker.finish()
+                self.motor_L = - self.C
+                self.motor_R = self.C
+        else:
+            self.motor_L = self.C_lin
+            self.motor_R = - self.C_lin
+
+    def get_control(self):
+        return str(abs(self.motor_R)) + "," + np.sign(self.motor_R) + "," + str(abs(self.motor_L)) + "," + np.sign(self.motor_L)
+
+
+tracker = ColorTracker()
+tracker.colorSetup()
+tracker.initiateVideo()
+
+coms = Communication()
+coms.begin()
+
+control = Pid()
+
+tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
+tracking_thread.daemon = True
+tracking_thread.start()
+
+running = True
+
+while running:
+    ret, frame = tracker.cap.read()
+    if ret:
+        if (coms.manual_mode):
+            if keyboard.is_pressed('a'):
+                coms.comunicacion('L\n')
+            elif keyboard.is_pressed('d'):
+                coms.comunicacion('R\n')
+            elif keyboard.is_pressed('w'):
+                coms.comunicacion('U\n')
+            elif keyboard.is_pressed('s'):
+                coms.comunicacion('D\n')
+            elif keyboard.is_pressed('p'):
+                coms.comunicacion('S\n')
+            elif keyboard.is_pressed('m'):
+                coms.switch_mode()
+        else:
+            distancia = tracker.distancia
+            control.make_control(distancia)
+            control_signal = control.get_control()
+            coms.comunicacion(control_signal)
+    if keyboard.is_pressed('x'):
+        running = False
+        print("Stopped")
+
+tracker.stop_tracking()
+tracker.finish()
