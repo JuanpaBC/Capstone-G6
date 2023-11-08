@@ -160,7 +160,7 @@ class Pid:
         self.Ki = 0.01
         self.Kd = 0.00008
         self.tol = 100 # tolerancia a error
-        self.min_C = 100
+        self.min_C = 120
         self.max_C = 255
         self.C_lin = 200
         
@@ -199,10 +199,8 @@ class Pid:
             self.motor_R = - self.C_lin
 
     def get_control(self):
-        return str(self.motor_L) + "," + str(self.motor_R)
+        return str(abs(self.motor_R)) + "," + np.sign(self.motor_R) + "," + str(abs(self.motor_L)) + "," + np.sign(self.motor_L)
 
-    def send_control(self):
-        
 
 if __name__ == '__main__':
     tracker = ColorTracker()
