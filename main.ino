@@ -232,20 +232,20 @@ void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, i
   // Initialize strtok with the comma as the delimiter
   char *token = strtok(inputBuffer, ",");
 
-  for(i=0, i<4, i++) {
+  for(int i=0; i<4; i++) {
     int intValue = atoi(token); // Convert the token to an integer
     switch (i){
       case 0:
-        right_pwm* = intValue;
+        *right_pwm = intValue;
         break;
       case 1:
-        right_dir* = intValue;
+        *right_dir = intValue;
         break;
       case 2:
-        left_pwm* = intValue;
+        *left_pwm = intValue;
         break;
       case 3:
-        left_dir* = intValue;
+        *left_dir = intValue;
         break;
     }
   }
@@ -254,7 +254,7 @@ void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, i
 void setup() {
 
     pinMode(SRP, INPUT);
-    attachInterrupt(digitalPinToInterrupt(SRP), scoop, LOWERING);
+    attachInterrupt(digitalPinToInterrupt(SRP), scoop, FALLING);
 
     servo.attach(SP);    // States that the servo is attached to pin 5
     servo.write(angle); // Sets the servo angle to 0 degrees
@@ -303,7 +303,7 @@ void loop() {
     int right_dir;
     int left_pwm;
     int left_dir;
-    stringSplitter(msg, right_pwm, right_dir, left_pwm, left_dir);
+    stringSplitter(msg, &right_pwm, &right_dir, &left_pwm, &left_dir);
 
     if(right_dir == 0){
       digitalWrite(AIN1, LOW);
