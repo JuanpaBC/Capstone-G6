@@ -105,7 +105,7 @@ void Parar()
 
 void Avanzar(int pwm_ref)
 {
-    Serial.println("Atras");
+    Serial.println("Adelante");
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
@@ -224,10 +224,37 @@ void readSerialPort() {
   }
 }
 
+void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir){
+  char inputBuffer[20];
+  // Copy the string into a character array
+  msg.toCharArray(inputBuffer, sizeof(inputBuffer));
+
+  // Initialize strtok with the comma as the delimiter
+  char *token = strtok(inputBuffer, ",");
+
+  for(i=0, i<4, i++) {
+    int intValue = atoi(token); // Convert the token to an integer
+    switch (i){
+      case 0:
+        right_pwm* = intValue;
+        break;
+      case 1:
+        right_dir* = intValue;
+        break;
+      case 2:
+        left_pwm* = intValue;
+        break;
+      case 3:
+        left_dir* = intValue;
+        break;
+    }
+  }
+}
+
 void setup() {
 
     pinMode(SRP, INPUT);
-    attachInterrupt(digitalPinToInterrupt(SRP), scoop, RISING);
+    attachInterrupt(digitalPinToInterrupt(SRP), scoop, LOWERING);
 
     servo.attach(SP);    // States that the servo is attached to pin 5
     servo.write(angle); // Sets the servo angle to 0 degrees
@@ -272,7 +299,32 @@ void loop() {
   }
 
   if(auto_mode){
-    // modo automatico juju
+    int right_pwm;
+    int right_dir;
+    int left_pwm;
+    int left_dir;
+    stringSplitter(msg, right_pwm, right_dir, left_pwm, left_dir);
+
+    if(right_dir == 0){
+      digitalWrite(AIN1, LOW);
+      digitalWrite(AIN2, HIGH);
+    }
+    else {
+      digitalWrite(AIN1, HIGH);
+      digitalWrite(AIN2, LOW);
+    }
+    analogWrite(ENA, left_pwm);
+
+
+    if(right_dir == 0){
+      digitalWrite(BIN1, LOW);
+      digitalWrite(BIN2, HIGH);
+    }
+    else {
+      digitalWrite(BIN1, HIGH);
+      digitalWrite(BIN2, LOW);
+    }
+    analogWrite(ENB, right_pwm);
   }
   else {
     if(msg == forward){
