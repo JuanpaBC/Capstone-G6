@@ -35,7 +35,7 @@ Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
 
 int d = 23; // mm of wheel
-int ratio_ruedas = 10;
+int ratio_ruedas = 500;
 int steps = 12;
 int state = 10;
 int delay_time = 2000;
