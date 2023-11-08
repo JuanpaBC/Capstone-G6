@@ -215,8 +215,8 @@ void scoop()
     }
 }
 
-void readSerialPort() {
-  msg = "";
+void readSerialPort(String *msg) {
+  *msg = "";
   char receivedChar;
   if (Serial.available()) {
       delay(10);
@@ -226,7 +226,7 @@ void readSerialPort() {
           Serial.println("ACK\n");
           break;
         }
-          msg += receivedChar;
+          *msg += receivedChar;
       }
   }
 }
@@ -296,7 +296,7 @@ void setup() {
 
 void loop() {
 
-  readSerialPort();
+  readSerialPort(&msg);
 
   if (msg == manual) {
     auto_mode = false;
@@ -343,7 +343,7 @@ void loop() {
     else if(msg == left){
       Doblar_izquierda(PWM);
     }
-    else if(msg == left){
+    else if(msg == right){
       Doblar_derecha(PWM);
     }
     else if(msg == activate_scoop){
