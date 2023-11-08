@@ -13,7 +13,7 @@ class ColorTracker:
         self.image = None
         self.distancia = "0"
         self.tracking = True
-        self.show = False
+        self.show = True
 
     def nothing(self, x):
         pass
@@ -102,7 +102,7 @@ class ColorTracker:
                         if self.mostrar_contorno:
                             cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
                         self.distancia = str(x - frame.shape[1] * 0.5)
-                        #print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")
+                        # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")
                 if self.show:
                     cv2.imshow('frame', frame)
                 if cv2.waitKey(1) & 0xFF == ord('s'):
@@ -115,12 +115,13 @@ class ColorTracker:
         self.cap.release()
         cv2.destroyAllWindows()
 
+
 class Communication:
     def _init_(self) -> None:
         self.mostrar_contorno = False
-        self.manual_mode = True
+        self.manual_mode = False
         self.starts = False
-        self.target_W = "COM4"
+        self.target_W = "COM3"
         self.target_L = '/dev/ttyACM0'
 
     def begin(self):
@@ -131,26 +132,84 @@ class Communication:
             time.sleep(1)
     
     def comunicacion(self, distancia):
-    # Manda la distancia medida y espera respuesta del Arduino.
+        # Manda la distancia medida y espera respuesta del Arduino.
         print("Enviando mensaje")
         if self.arduino.isOpen():
             self.arduino.write(distancia.encode('utf-8'))
         # Wait for an acknowledgment response from Arduino
-        response = self.arduino.readline().decode('utf-8').strip()
-        print(response)
-        
-        if response == "ACK":
-            print("Arduino received the message")
-        else:
-            print("Arduino did not acknowledge the message")
+        time.sleep(5)
+        if self.manual_mode:
+            response = self.arduino.readline().decode('utf-8').strip()
+            print(response)
+            if response == "ACK":
+                print("Arduino received the message")
+            else:
+                print("Arduino did not acknowledge the message")
 
     def switch_mode(self):
+        if self.manual_mode:
+            self.comunicacion('N')
+            print("Changing into auto mode")
+        else:
+            self.comunicacion('M')
+            print("Changing into manual mode")
         self.manual_mode = not self.manual_mode
 
 
 def track_wrapper(tracker):
     # This function is used to run the track() method in a separate thread.
     tracker.track()
+
+
+class Pid:
+    def __init__(self):
+        self.Ts = 0.2 # time sample
+        self.Kp = 7
+        self.Ki = 0.01
+        self.Kd = 0.00008
+        self.tol = 10 # tolerancia a error
+        self.min_C = 120
+        self.max_C = 255
+        self.C_lin = 200
+        
+        self.ref = 0
+        self.E = 0
+        self.E_ = 0
+        self.E__ = 0
+        self.C = 0
+        self.C_ = 0
+        self.motor_R = 0
+        self.motor_L = 0
+
+    def update(self, error):
+        self.E__ = self.E_
+        self.E_ = self.E
+        self.E = error
+        self.C_ = self.C
+        self.C = self.C_ + (self.Kp + self.Ts*self.Ki + self.Kd/self.Ts)*self.E + (-self.Kp - 2*self.Kd/self.Ts)*self.E_ + (self.Kd/self.Ts)*self.E__
+        if abs(self.C) > self.max_C:
+            self.C = np.sign(self.C) * self.max_C
+        if abs(self.C) < self.min_C:
+            self.C = np.sign(self.C) * self.min_C
+        self.C =  np.sign(self.C) * int(self.C)
+
+    def make_control(self, distancia):
+        error = float(distancia)
+        if abs(error) > self.tol:
+            self.update(error)
+            if error > 0:
+                self.motor_L = self.C
+                self.motor_R = - self.C
+            else:
+                self.motor_L = - self.C
+                self.motor_R = self.C
+        else:
+            self.motor_L = self.C_lin
+            self.motor_R = - self.C_lin
+
+    def get_control(self):
+        return str(abs(self.motor_R)) + "," + str(np.sign(self.motor_R)) + "," + str(abs(self.motor_L)) + "," + str(np.sign(self.motor_L));
+
 
 if __name__ == '__main__':
     tracker = ColorTracker()
@@ -182,9 +241,13 @@ running = True
                     coms.comunicacion('S\n')
                 elif keyboard.is_pressed('m'):
                     coms.switch_mode()
+                    tracker.show = True
             else:
                 distancia = tracker.distancia
-                coms.comunicacion(distancia)
+                control.make_control(distancia)
+                control_signal = control.get_control()
+                print(control_signal)
+                coms.comunicacion(control_signal)
         if keyboard.is_pressed('x'):
             running = False
             print("Stopped")

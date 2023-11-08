@@ -1,16 +1,16 @@
-/*
-  TB6612FNG-Dual-Driver
-  made on 28 oct 2020
-  by Amir Mohammad Shojaee @ Electropeak
-  Home
-
-*/
 #include <Servo.h> //Imports the library Servo
+
+#define SLP 7 // Sensor light pin
+#define SRP 2 // Sensor receptor pin
+
+#define SP 8 // Servo pin
+#define MAXANG 180 // Servo máx angle
+#define MINANG 0 // Servo min angle
+#define SCOOPDELAY 15
 
 #define ENA 9 // D6
 #define ENB 6
 
-//#define STBY 8  // D2
 #define AIN1 11 // D1
 #define AIN2 10  // D0
 
@@ -29,15 +29,29 @@
 
 #define servoPin 8
 
-#define IRsensor
+int right_pwm_value;
+int right_dir_value;
+int left_pwm_value;
+int left_dir_value;
+Servo servo;   // Defines the object Servo of type(class) Servo
+int angle = MINANG; // Defines an integer
 
-Servo servo; //Defines the object Servo of type(class) Servo
-int angle = 0; // Defines an integer
+// Python commands
+String left = "L";
+String right = "R";
+String forward = "U";
+String backwards = "D";
+String scoopeSignal = "S";
+String manual = "M";
+String automatic = "N";
+
+String msg;
+bool auto_mode = true;
 
 int d = 23; // mm of wheel
-int ratio_ruedas = 500;
+int ratio_ruedas = 10;
 int steps = 12;
-int state = 10;
+int state = 8;
 int delay_time = 2000;
 float vueltas_ruedasA;
 float vueltas_ruedasB;
@@ -99,7 +113,7 @@ void Parar()
 
 void Avanzar(int pwm_ref)
 {
-    Serial.println("Atras");
+    Serial.println("Avanzar");
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
@@ -189,8 +203,72 @@ void doEncoderB2()
     }
 }
 
-void setup()
+// ************** Función para mover la pala ***************
+void scoop()
 {
+    Serial.println("pala");
+     // The following for loop runs till the servo is turned till 180degrees
+    for (angle = MINANG; angle < MAXANG; angle++)
+    {
+        servo.write(angle);
+        delay(SCOOPDELAY);
+    }
+
+    // The following for loop goes back till servo is turned till 10degrees
+    for (angle = MAXANG; angle > MINANG; angle--)
+    {
+        servo.write(angle);
+        delay(SCOOPDELAY);
+    }
+}
+
+void readSerialPort() {
+  msg = "";
+  if (Serial.available()) {
+      delay(10);
+      while (Serial.available() > 0) {
+          msg += (char)Serial.read();
+      }
+      Serial.flush();
+  }
+}
+
+void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir){
+  char inputBuffer[20];
+  // Copy the string into a character array
+  msg.toCharArray(inputBuffer, sizeof(inputBuffer));
+
+  // Initialize strtok with the comma as the delimiter
+  char *token = strtok(inputBuffer, ",");
+
+  for(int i=0; i<4; i++) {
+    int intValue = atoi(token); // Convert the token to an integer
+    switch (i){
+      case 0:
+        *right_pwm = intValue;
+        break;
+      case 1:
+        *right_dir = intValue;
+        break;
+      case 2:
+        *left_pwm = intValue;
+        break;
+      case 3:
+        *left_dir = intValue;
+        break;
+    }
+  }
+}
+
+void setup() {
+    digitalWrite(redLed, LOW);
+
+    pinMode(SRP, INPUT);
+    attachInterrupt(digitalPinToInterrupt(SRP), scoop, FALLING);
+
+    servo.attach(SP);    // States that the servo is attached to pin 5
+    servo.write(angle); // Sets the servo angle to 0 degrees
+
     pinMode(ENA, OUTPUT);
     pinMode(AIN1, OUTPUT);
     pinMode(AIN2, OUTPUT);
@@ -198,6 +276,8 @@ void setup()
     pinMode(BIN1, OUTPUT);
     pinMode(BIN2, OUTPUT);
 
+    pinMode(redLed, OUTPUT);
+   
     pinMode(AC1, INPUT_PULLUP);
     digitalWrite(AC1, HIGH);
     pinMode(AC2, INPUT_PULLUP);
@@ -208,11 +288,6 @@ void setup()
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
 
-    pinMode(redLed, OUTPUT);
-
-    servo.attach(servoPin); // States that the servo is attached to pin 5
-    servo.write(angle);
-
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
 
@@ -221,145 +296,66 @@ void setup()
 
     Serial.begin(115200);
 }
-int donothing(){
-  int i = 0;
-  i++;
-  delay(900);  
-}
 
-void loop()
-{
-    if (((micros() - time_ant) >= Period) && state != 10 && state != 9)
-    { // Cada Period de tiempo hace el calculo
-        newtime = micros();
-        vueltas_ruedasA = (float)encoderAPos / (steps * ratio_ruedas);
-        vueltas_ruedasB = (float)encoderBPos / (steps * ratio_ruedas);
-        newpositionA = encoderAPos;
-        newpositionB = encoderBPos;
-        float rpm = 249500;                                                      
-        velA = (float)(newpositionA - oldpositionA) * rpm / (newtime - time_ant);
-        oldpositionA = newpositionA;
+void loop() {
 
-        velB = (float)(newpositionB - oldpositionB) * rpm / (newtime - time_ant);
-        oldpositionB = newpositionB;
+  readSerialPort();
 
-        // Calculate linear velocity (in mm/s)
-        float distanceA = vueltas_ruedasA * d * 3.1415 / 10;
-        float distanceB = vueltas_ruedasB * d * 3.1415 / 10;
+  if(msg == manual){
+    auto_mode = false;
+  }
+  else if(msg == automatic){
+    auto_mode = true;
+    
+  }
 
-        // Calculate the average linear velocity of both wheels
-        avance = (distanceA + distanceB) / 2;
-
-        time_ant = newtime;
-
-        Serial.print(vueltas_ruedasA);
-        Serial.print(" vueltas A, ");
-        Serial.print(vueltas_ruedasB);
-        Serial.print(" vueltas B, ");
-        Serial.print(velA);
-        Serial.print(" RPM A, ");
-        Serial.print(velB);
-        Serial.print(" RPM B, ");
-        Serial.print(avance);
-        Serial.print(" cm de avance, ");
-        Serial.print((float)newtime * 0.000001);
-        Serial.print(" s.");
-        Serial.print(state);
-        Serial.println(" Estado");
+  if(auto_mode){
+    if(msg != ""){
+      digitalWrite(redLed, HIGH);
+      stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
     }
-    switch (state)
-    {
-    case 0:
-        if (avance > 20)
-        {
-            Parar();
-            ref_time = micros();
-            state = 1;
-        }
-        break;
 
-    case 1:
-        if ((micros() - ref_time) * 0.000001 > 5)
-        {
-            state = 2;
-            Atras(PWM);
-        }
-        break;
-
-    case 2:
-        if (avance < 0)
-        {
-            Parar();
-            ref_time = micros();
-            state = 3;
-        }
-        break;
-
-    case 3:
-        if ((micros() - ref_time) * 0.000001 > 3)
-        {
-            ref_time = micros();
-            Doblar_derecha(PWM);
-            state = 4;
-        }
-        break;
-        
-    case 4:
-        if ((micros() - ref_time) * 0.000001 > 3)
-        {
-            ref_time = micros();
-            Parar();
-            state = 5;
-        }
-        break;
-    case 5:
-        if ((micros() - ref_time) * 0.000001 > 3)
-        {
-            ref_time = micros();
-            Doblar_izquierda(PWM);
-            state = 6;
-        }
-        break;
-    case 6:
-        if ((micros() - ref_time) * 0.000001 > 3)
-        {
-          Parar();
-          state = 7;
-          digitalWrite(redLed, HIGH);
-        }
-        break;
-    case 7:
-      for(angle = 0; angle < 180; angle++) {                                  
-        servo.write(angle);               
-        delay(15);                   
-      } 
-      if(angle >= 180){
-        state = 8;
-      }
-    case 8:
-      for(angle = 180; angle > 0; angle--){                                
-        servo.write(angle);           
-        delay(15);       
-      } 
-      if(angle <= 0){
-        state = 9;
-      }
-    case 9:
-      donothing();
-    case 10:
-        digitalWrite(redLed, HIGH);
-        int c =  round(countdown - micros()* 0.000001);
-        if(c != printedCountdown){
-          printedCountdown = c;
-        }
-        if ((micros()) * 0.000001 > 5)
-        {
-          Avanzar(PWM);
-          state = 0;
-          digitalWrite(redLed, LOW);
-        }
-        break;
-    default:
-        break;
+    if(left_dir_value == -1){
+      digitalWrite(AIN1, LOW);
+      digitalWrite(AIN2, HIGH);
     }
+    else {
+      digitalWrite(AIN1, HIGH);
+      digitalWrite(AIN2, LOW);
+    }
+    analogWrite(ENA, left_pwm_value);
+
+
+    if(right_dir_value == -1){
+      digitalWrite(BIN1, LOW);
+      digitalWrite(BIN2, HIGH);
+    }
+    else {
+      digitalWrite(BIN1, HIGH);
+      digitalWrite(BIN2, LOW);
+    }
+    analogWrite(ENB, right_pwm_value);
+  }
+  else {
+    digitalWrite(redLed, LOW);
+    if(msg == forward){
+      Avanzar(PWM);
+    }
+    else if(msg == backwards){
+      Atras(PWM);
+    }
+    else if(msg == left){
+      Doblar_izquierda(PWM);
+    }
+    else if(msg == right){
+      Doblar_derecha(PWM);
+    }
+    else if(msg == scoopeSignal){
+      scoop();
+    }
+    else if(msg == "") {
+      Parar();
+    }
+  }
+  msg = "";
 }
