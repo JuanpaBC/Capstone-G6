@@ -147,9 +147,62 @@ class Communication:
     def switch_mode(self):
         self.manual_mode = not self.manual_mode
 
+
 def track_wrapper(tracker):
     # This function is used to run the track() method in a separate thread.
     tracker.track()
+
+
+class Pid:
+    def __init__(self):
+        self.Ts = 0.2 # time sample
+        self.Kp = 7
+        self.Ki = 0.01
+        self.Kd = 0.00008
+        self.tol = 100 # tolerancia a error
+        self.min_C = 100
+        self.max_C = 255
+        self.C_lin = 200
+        
+        self.ref = 0
+        self.E = 0
+        self.E_ = 0
+        self.E__ = 0
+        self.C = 0
+        self.C_ = 0
+        self.motor_R = 0
+        self.motor_L = 0
+
+    def update(self, error):
+        self.E__ = self.E_
+        self.E_ = self.E
+        self.E = error
+        self.C_ = self.C
+        self.C = self.C_ + (self.Kp + self.Ts*self.Ki + self.Kd/self.Ts)*self.E + (-self.Kp - 2*self.Kd/self.Ts)*self.E_ + (self.Kd/self.Ts)*self.E__
+        if abs(self.C) > self.max_C:
+            self.C = np.sign(self.C) * self.max_C
+        if abs(self.C) < self.min_C:
+            self.C = np.sign(self.C) * self.min_C
+
+    def make_control(self, distancia):
+        error = float(distancia)
+        if abs(error) > self.tol:
+            self.update(error)
+            if error > 0:
+                self.motor_L = self.C
+                self.motor_R = - self.C
+            else:
+                self.motor_L = - self.C
+                self.motor_R = self.C
+        else:
+            self.motor_L = self.C_lin
+            self.motor_R = - self.C_lin
+
+    def get_control(self):
+        return str(self.motor_L) + "," + str(self.motor_R)
+
+    def send_control(self):
+        
 
 if __name__ == '__main__':
     tracker = ColorTracker()
@@ -158,6 +211,8 @@ if __name__ == '__main__':
 
     coms = Communication()
     coms.begin()
+    
+    control = Pid()
 
     tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
     tracking_thread.daemon = True
@@ -183,7 +238,9 @@ if __name__ == '__main__':
                     coms.switch_mode()
             else:
                 distancia = tracker.distancia
-                coms.comunicacion(distancia)
+                control.make_control(distancia)
+                control_signal = control.get_control()
+                coms.comunicacion(control_signal)
         if keyboard.is_pressed('x'):
             running = False
             print("Stopped")
