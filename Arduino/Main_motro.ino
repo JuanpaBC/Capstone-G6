@@ -1,3 +1,11 @@
+/*
+  TB6612FNG-Dual-Driver
+  made on 28 oct 2020
+  by Amir Mohammad Shojaee @ Electropeak
+  Home
+
+*/
+#include <Servo.h> //Imports the library Servo
 
 #define ENA 9 // D6
 #define ENB 6
@@ -6,21 +14,30 @@
 #define AIN1 11 // D1
 #define AIN2 10  // D0
 
-#define BIN1 4
-#define BIN2 5
+#define BIN1 5
+#define BIN2 4
 
-#define AC1 20 // D4
-#define AC2 21 // D3
+#define AC1 21 // D4
+#define AC2 20 // D3
 
-#define BC1 18
-#define BC2 19
+#define BC1 19
+#define BC2 18
 
-#define switchPin 1
+#define IRLed 7
+
+#define redLed 51
+
+#define servoPin 8
+
+#define IRsensor
+
+Servo servo; //Defines the object Servo of type(class) Servo
+int angle = 0; // Defines an integer
 
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
 int steps = 12;
-int state = 8;
+int state = 10;
 int delay_time = 2000;
 float vueltas_ruedasA;
 float vueltas_ruedasB;
@@ -191,7 +208,10 @@ void setup()
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
 
-    pinMode(switchPin, INPUT_PULLUP);
+    pinMode(redLed, OUTPUT);
+
+    servo.attach(servoPin); // States that the servo is attached to pin 5
+    servo.write(angle);
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
@@ -201,10 +221,15 @@ void setup()
 
     Serial.begin(115200);
 }
+int donothing(){
+  int i = 0;
+  i++;
+  delay(900);  
+}
 
 void loop()
 {
-    if (((micros() - time_ant) >= Period) && state != 8)
+    if (((micros() - time_ant) >= Period) && state != 10 && state != 9)
     { // Cada Period de tiempo hace el calculo
         newtime = micros();
         vueltas_ruedasA = (float)encoderAPos / (steps * ratio_ruedas);
@@ -241,36 +266,7 @@ void loop()
         Serial.print(" s.");
         Serial.print(state);
         Serial.println(" Estado");
-
     }
-
-    //enable = digitalRead(switchPin);
-    //btnState = digitalRead(btnPin);
-
-    /*if (btnState == HIGH && !pressed) {
-        Serial.println("**Pressing**");
-        enable = !enable;
-        Serial.println(enable);
-        pressed = true;
-        pressed_time = micros();
-    }
-
-    now = micros();
-
-    if ((now - pressed_time) >= Debounce){
-      Serial.println("**Debounced**");
-      pressed = false;
-      pressed_time = 0;
-    }*/
-
-    /*if(enable == HIGH){
-      Serial.println("--Prendido--");
-      state = 0;
-    } else{
-      Serial.println("--Apagado--");
-      Parar();
-      state = 7;
-    }*/
     switch (state)
     {
     case 0:
@@ -295,7 +291,7 @@ void loop()
         {
             Parar();
             ref_time = micros();
-            state = 8;
+            state = 3;
         }
         break;
 
@@ -329,9 +325,29 @@ void loop()
         {
           Parar();
           state = 7;
+          digitalWrite(redLed, HIGH);
         }
         break;
+    case 7:
+      for(angle = 0; angle < 180; angle++) {                                  
+        servo.write(angle);               
+        delay(15);                   
+      } 
+      if(angle >= 180){
+        state = 8;
+      }
     case 8:
+      for(angle = 180; angle > 0; angle--){                                
+        servo.write(angle);           
+        delay(15);       
+      } 
+      if(angle <= 0){
+        state = 9;
+      }
+    case 9:
+      donothing();
+    case 10:
+        digitalWrite(redLed, HIGH);
         int c =  round(countdown - micros()* 0.000001);
         if(c != printedCountdown){
           printedCountdown = c;
@@ -340,6 +356,7 @@ void loop()
         {
           Avanzar(PWM);
           state = 0;
+          digitalWrite(redLed, LOW);
         }
         break;
     default:
