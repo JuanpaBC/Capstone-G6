@@ -1,28 +1,56 @@
-#include <Servo.h> //Imports the library Servo
+#include <IRremote.h>
 
-Servo servo;   // Defines the object Servo of type(class) Servo
+#include <Servo.h>
+
+#define IRLed 7
+
+#define redLed 51
+
+#define servoPin 8
+
+#define IRsensorPin 2
+
+Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
+int SCOOPDELAY = 15;
+int MAXANG = 180;
+int MINANG = 10;
 
-void setup()
+void scoop()
 {
-    servo.attach(1);    // States that the servo is attached to pin 5
-    servo.write(angle); // Sets the servo angle to 10degrees
-}
-
-void loop()
-{
-
-    // The following for loop runs till the servo is turned till 180degrees
-    for (angle = 10; angle < 180; angle++)
+    Serial.println("scooping");
+     // The following for loop runs till the servo is turned till 180degrees
+    for (angle = MINANG; angle < MAXANG; angle++)
     {
         servo.write(angle);
-        delay(15);
+        delay(SCOOPDELAY);
     }
 
     // The following for loop goes back till servo is turned till 10degrees
-    for (angle = 180; angle > 10; angle--)
+    for (angle = MAXANG; angle > MINANG; angle--)
     {
         servo.write(angle);
-        delay(15);
+        delay(SCOOPDELAY);
     }
+}
+
+void setup() {
+  servo.attach(servoPin);
+  servo.write(angle);
+
+  pinMode(IRLed, OUTPUT);
+  IrReceiver.begin(IRsensorPin, ENABLE_LED_FEEDBACK);  
+
+  analogWrite(IRLed, 200);
+
+  Serial.begin(115200);
+}
+
+
+void loop() { 
+  if (IrReceiver.decode()){
+    Serial.println("a");
+    IrReceiver.printIRResultShort(&Serial);
+    IrReceiver.resume();
+  }
 }
