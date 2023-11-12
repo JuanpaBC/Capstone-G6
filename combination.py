@@ -12,8 +12,8 @@ class ColorTracker:
         self.cap = None
         self.image = None
         self.distancia = "0"
-        self.tracking = False
-        self.show = False
+        self.tracking = True
+        self.show = True
 
     def nothing(self, x):
         pass
@@ -119,7 +119,7 @@ class ColorTracker:
 class Communication:
     def __init__(self) -> None:
         self.mostrar_contorno = False
-        self.manual_mode = True
+        self.manual_mode = False
         self.starts = False
         self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
@@ -136,9 +136,9 @@ class Communication:
         print(f'Enviando mensaje {distancia}')
         if self.arduino.isOpen():
             self.arduino.write(distancia.encode('utf-8'))
-        # Wait for an acknowledgment response from Arduino
-        time.sleep(5)
         if self.manual_mode:
+            # Wait for an acknowledgment response from Arduino
+            time.sleep(5)
             response = self.arduino.readline().decode('utf-8').strip()
             print(response)
             if response == "ACK":
@@ -164,7 +164,7 @@ def track_wrapper(tracker):
 class Pid:
     def __init__(self):
         self.Ts = 0.2 # time sample
-        self.Kp = 7
+        self.Kp = 5
         self.Ki = 0.01
         self.Kd = 0.00008
         self.tol = 50 # tolerancia a error
@@ -204,11 +204,11 @@ class Pid:
                 self.motor_L = - self.C
                 self.motor_R = self.C
         else:
-            self.motor_L = self.C_lin
-            self.motor_R = - self.C_lin
+            self.motor_L = 0
+            self.motor_R = 0
 
     def get_control(self):
-        return str(int(abs(self.motor_R))) + "," + str(int(np.sign(self.motor_R)+1)) + "," + str(int(abs(self.motor_L))) + "," + str(int(np.sign(self.motor_L)+1));
+        return str(int(abs(self.motor_R))) + "," + str(int(np.sign(self.motor_R))) + "," + str(int(abs(self.motor_L))) + "," + str(int(np.sign(self.motor_L)));
 
 
 tracker = ColorTracker()
@@ -217,6 +217,8 @@ tracker.initiateVideo()
 
 coms = Communication()
 coms.begin()
+
+control = Pid()
 
 tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
 tracking_thread.daemon = True
@@ -243,7 +245,7 @@ while running:
         elif keyboard.is_pressed('q'):
             coms.comunicacion('0,1,0,1\n')
         elif keyboard.is_pressed('m'):
-            #coms.switch_mode()
+            coms.switch_mode()
             tracker.show = True
     else:
         ret, frame = tracker.cap.read()
@@ -257,5 +259,5 @@ while running:
         running = False
         print("Stopped")
     
-    tracker.stop_tracking()
-    tracker.finish()
+tracker.stop_tracking()
+tracker.finish()

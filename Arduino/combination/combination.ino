@@ -23,19 +23,21 @@
 #define BC1 19
 #define BC2 18
 
+#define redLed 51
+
 Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
 
 // Python commands
-String left = "L";
-String right = "R";
-String forward = "U";
-String backwards = "D";
-String activate_scoop = "S";
-String manual = "M";
-String automatic = "N";
+char left[] = "L";
+char right[] = "R";
+char forward[] = "U";
+char backwards[] = "D";
+char activate_scoop[] = "S";
+char manual[] = "M";
+char automatic[] = "N";
 
-String msg;
+char msg[20];
 bool auto_mode = true;
 
 int d = 23; // mm of wheel
@@ -212,48 +214,58 @@ void scoop()
     }
 }
 
-void readSerialPort(String *msg) {
-  *msg = "";
-  char receivedChar;
-  if (Serial.available()) {
-      delay(10);
-      while (Serial.available()) {
-        receivedChar = Serial.read();
-        if (receivedChar == '\n') {
-          Serial.println("ACK\n");
-          break;
+void readSerialPort(char *msg) {
+    *msg = '\0';
+    char receivedChar;
+    if (Serial.available())
+    {
+        delay(10);
+        while (Serial.available())
+        {
+            receivedChar = Serial.read();
+            if (receivedChar == '\n')
+            {
+                Serial.println("ACK\n");
+                break;
+            }
+            *msg++ = receivedChar;
         }
-          *msg += receivedChar;
-      }
-  }
-}
-
-void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir){
-  char inputBuffer[20];
-  // Copy the string into a character array
-  msg.toCharArray(inputBuffer, sizeof(inputBuffer));
-
-  // Initialize strtok with the comma as the delimiter
-  char *token = strtok(inputBuffer, ",");
-
-  for(int i=0; i<4; i++) {
-    int intValue = atoi(token); // Convert the token to an integer
-    switch (i){
-      case 0:
-        *right_pwm = intValue;
-        break;
-      case 1:
-        *right_dir = intValue;
-        break;
-      case 2:
-        *left_pwm = intValue;
-        break;
-      case 3:
-        *left_dir = intValue;
-        break;
+        *msg = '\0';
     }
+}
+
+void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir)
+{
+  char inputBuffer[20];
+  strcpy(inputBuffer, msg);
+
+  char *token = strtok(inputBuffer, ",");
+  for (int i = 0; i < 4; i++)
+  {
+      int intValue = atoi(token);
+      if (intValue == 1)
+      {
+          digitalWrite(redLed, HIGH);
+      }
+      switch (i)
+      {
+      case 0:
+          *right_pwm = intValue;
+          break;
+      case 1:
+          *right_dir = intValue;
+          break;
+      case 2:
+          *left_pwm = intValue;
+          break;
+      case 3:
+          *left_dir = intValue;
+          break;
+      }
+      token = strtok(NULL, ",");
   }
 }
+
 
 void setup() {
 
@@ -269,6 +281,7 @@ void setup() {
     pinMode(ENB, OUTPUT);
     pinMode(BIN1, OUTPUT);
     pinMode(BIN2, OUTPUT);
+    pinMode(redLed, OUTPUT);
 
     pinMode(AC1, INPUT_PULLUP);
     digitalWrite(AC1, HIGH);
@@ -291,16 +304,17 @@ void setup() {
 
 void loop() {
 
-  readSerialPort(&msg);
+  readSerialPort(msg);
 
-  if (msg == manual) {
-    auto_mode = false;
-  } else if (msg == automatic) {
-    auto_mode = true;
+  if (strcmp(msg, manual) == 0)
+  {
+      auto_mode = false;
   }
-
+  else if (strcmp(msg, automatic) == 0)
+  {
+      auto_mode = true;
+  }
   if (auto_mode) {
-
     int right_pwm;
     int right_dir;
     int left_pwm;
@@ -308,27 +322,33 @@ void loop() {
     stringSplitter(msg, &right_pwm, &right_dir, &left_pwm, &left_dir);
 
     // Implement motor control based on received values here.
-    if (right_dir == 1) {
-      // Set motor A direction based on right_dir
-      digitalWrite(AIN1, LOW);
-      digitalWrite(AIN2, HIGH);
-    } else {
-      digitalWrite(AIN1, HIGH);
-      digitalWrite(AIN2, LOW);
-    }
-    analogWrite(ENA, left_pwm);
+    if (msg[0] != '\0'){
+      if (left_dir == 1) {
+        // Set motor A direction based on right_dir
+        digitalWrite(AIN1, LOW);
+        digitalWrite(AIN2, HIGH);
+      } else {
+        digitalWrite(redLed, LOW);
 
-    if (left_dir == 0) {
-      // Set motor B direction based on left_dir
-      digitalWrite(BIN1, LOW);
-      digitalWrite(BIN2, HIGH);
-    } else {
-      digitalWrite(BIN1, HIGH);
-      digitalWrite(BIN2, LOW);
+        digitalWrite(AIN1, HIGH);
+        digitalWrite(AIN2, LOW);
+      }
+      analogWrite(ENA, left_pwm);
+
+      if (right_dir == 1) {
+        // Set motor B direction based on left_dir
+        digitalWrite(BIN1, HIGH);
+        digitalWrite(BIN2, LOW);
+      } else {
+        digitalWrite(BIN1, LOW);
+        digitalWrite(BIN2, HIGH);
+      }
+      analogWrite(ENB, right_pwm);
     }
-    analogWrite(ENB, right_pwm);
   }
   else {
+    digitalWrite(redLed, LOW);
+
     if(msg == forward){
       Avanzar(PWM);
     }
@@ -344,9 +364,10 @@ void loop() {
     else if(msg == activate_scoop){
       scoop();
     }
-    else if(msg == "") {
-      Parar();
+    else if (msg[0] == '\0')
+    {
+        Parar();
     }
   }
-  msg = "";
+  msg[0] = '\0';
 }
