@@ -6,7 +6,7 @@ import keyboard
 import threading
 
 class ColorTracker:
-    def __init__(self):
+    def _init_(self):
         self.mostrar_contorno = False
         self.setear_colores = False
         self.cap = None
@@ -117,7 +117,7 @@ class ColorTracker:
 
 
 class Communication:
-    def __init__(self) -> None:
+    def _init_(self) -> None:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
@@ -218,14 +218,12 @@ if __name__ == '__main__':
 
     coms = Communication()
     coms.begin()
-    
-    control = Pid()
 
-    tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
-    tracking_thread.daemon = True
-    tracking_thread.start()
+tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
+tracking_thread.daemon = True
+tracking_thread.start()
 
-    running = True
+running = True
 
     while running:
         ret, frame = tracker.cap.read()

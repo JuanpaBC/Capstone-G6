@@ -80,10 +80,10 @@ const int Period = 10000; // 10 ms = 100Hz
 //const int Debounce = 500000; // 500ms
 //unsigned long pressed_time = 0;
 
-// ************** Función para avanzar ***************
+// ************** Función para retroceder ***************
 void Atras(int pwm_ref)
 {
-    Serial.println("Adelante");
+    Serial.println("Atras");
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
@@ -109,7 +109,7 @@ void Parar()
     digitalWrite(BIN2, LOW);
     analogWrite(ENB, 0);
 }
-// ************** Función para ir hacia atras ***************
+// ************** Función para ir hacia avanzar ***************
 
 void Avanzar(int pwm_ref)
 {
