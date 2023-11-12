@@ -3,7 +3,7 @@
 #define SLP 7 // Sensor light pin
 #define SRP 2 // Sensor receptor pin
 
-#define SP 9 // Servo pin
+#define SP 8 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15
@@ -11,20 +11,17 @@
 #define ENA 9 // D6
 #define ENB 6
 
-//#define STBY 8  // D2
 #define AIN1 11 // D1
 #define AIN2 10  // D0
 
-#define BIN1 4
-#define BIN2 5
+#define BIN1 5
+#define BIN2 4
 
-#define AC1 20 // D4
-#define AC2 21 // D3
+#define AC1 21 // D4
+#define AC2 20 // D3
 
-#define BC1 18
-#define BC2 19
-
-#define switchPin 1
+#define BC1 19
+#define BC2 18
 
 Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
@@ -39,7 +36,7 @@ String manual = "M";
 String automatic = "N";
 
 String msg;
-bool auto_mode = false;
+bool auto_mode = true;
 
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
@@ -283,8 +280,6 @@ void setup() {
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
 
-    pinMode(switchPin, INPUT_PULLUP);
-
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
 
@@ -313,7 +308,7 @@ void loop() {
     stringSplitter(msg, &right_pwm, &right_dir, &left_pwm, &left_dir);
 
     // Implement motor control based on received values here.
-    if (right_dir == 0) {
+    if (right_dir == 1) {
       // Set motor A direction based on right_dir
       digitalWrite(AIN1, LOW);
       digitalWrite(AIN2, HIGH);

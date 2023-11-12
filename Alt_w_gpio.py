@@ -1,3 +1,20 @@
+
+import RPi.GPIO as GPIO
+import time
+
+# Set up GPIO mode and pin number
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(18, GPIO.OUT)
+
+# Send output signal
+GPIO.output(18, GPIO.HIGH)
+time.sleep(1)
+GPIO.output(18, GPIO.LOW)
+
+# Clean up GPIO
+GPIO.cleanup()
+
+
 import cv2
 import numpy as np
 import serial
@@ -6,14 +23,14 @@ import keyboard
 import threading
 
 class ColorTracker:
-    def __init__(self):
-        self.setear_colores = False
+    def _init_(self):
         self.mostrar_contorno = False
+        self.setear_colores = False
         self.cap = None
         self.image = None
         self.distancia = "0"
-        self.tracking = False
-        self.show = False
+        self.tracking = True
+        self.show = True
 
     def nothing(self, x):
         pass
@@ -116,44 +133,53 @@ class ColorTracker:
         cv2.destroyAllWindows()
 
 
-class Communication:
-    def __init__(self) -> None:
-        self.mostrar_contorno = False
-        self.manual_mode = True
-        self.starts = False
-        self.target_W = "COM7"
-        self.target_L = '/dev/ttyACM0'
-
+class rpi_gpio:
+    def __init__(self):
+        self.pin = 18
+        self.freq = 50
+        self.duty = 0
+        self.pwm = None
+        
+        #pescar los de abajo
+        self.send = 2
+        self.b0 = 3
+        self.b1 = 4
+        self.b2 = 17
+        self.b3 = 27
+        self.mode_1 = 22
+        self.mode_2 = 10
+        
+        
+        
     def begin(self):
-        self.arduino = serial.Serial(self.target_W, 115200, timeout=1)
-        time.sleep(0.1)
-        if self.arduino.isOpen():
-            print("{} conectado!".format(self.arduino.port))
-            time.sleep(1)
-    
-    def comunicacion(self, distancia):
-        # Manda la distancia medida y espera respuesta del Arduino.
-        print(f'Enviando mensaje {distancia}')
-        if self.arduino.isOpen():
-            self.arduino.write(distancia.encode('utf-8'))
-        # Wait for an acknowledgment response from Arduino
-        time.sleep(5)
-        if self.manual_mode:
-            response = self.arduino.readline().decode('utf-8').strip()
-            print(response)
-            if response == "ACK":
-                print("Arduino received the message")
-            else:
-                print("Arduino did not acknowledge the message")
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.pin, GPIO.OUT)
+        #self.pwm = GPIO.PWM(self.pin, self.freq)
+        #self.pwm.start(self.duty)
+        GPIO.setup(self.send, GPIO.OUT)
+        GPIO.setup(self.b0, GPIO.OUT)
+        GPIO.setup(self.b1, GPIO.OUT)
+        GPIO.setup(self.b2, GPIO.OUT)
+        GPIO.setup(self.b3, GPIO.OUT)
+        GPIO.setup(self.mode_1, GPIO.OUT)
+        GPIO.setup(self.mode_2, GPIO.OUT)
+        
+    def set_duty(self, duty):
+        self.duty = duty
+        self.pwm.ChangeDutyCycle(self.duty)
 
-    def switch_mode(self):
-        if self.manual_mode:
-            self.comunicacion('N')
-            print("Changing into auto mode")
-        else:
-            self.comunicacion('M')
-            print("Changing into manual mode")
-        self.manual_mode = not self.manual_mode
+    def stop(self):
+        self.pwm.stop()
+        GPIO.cleanup()
+    
+    def send_signal(self, dic):
+        GPIO.output(self.send, dic['send'])
+        GPIO.output(self.b0, dic['b0'])
+        GPIO.output(self.b1, dic['b1'])
+        GPIO.output(self.b2, dic['b2'])
+        GPIO.output(self.b3, dic['b3'])
+        GPIO.output(self.mode_1, dic['mode_1'])
+        GPIO.output(self.mode_2, dic['mode_2'])
 
 
 def track_wrapper(tracker):
@@ -167,7 +193,7 @@ class Pid:
         self.Kp = 7
         self.Ki = 0.01
         self.Kd = 0.00008
-        self.tol = 50 # tolerancia a error
+        self.tol = 10 # tolerancia a error
         self.min_C = 120
         self.max_C = 255
         self.C_lin = 200
@@ -208,15 +234,16 @@ class Pid:
             self.motor_R = - self.C_lin
 
     def get_control(self):
-        return str(int(abs(self.motor_R))) + "," + str(int(np.sign(self.motor_R)+1)) + "," + str(int(abs(self.motor_L))) + "," + str(int(np.sign(self.motor_L)+1));
+        return str(abs(self.motor_R)) + "," + str(np.sign(self.motor_R)) + "," + str(abs(self.motor_L)) + "," + str(np.sign(self.motor_L));
 
 
-tracker = ColorTracker()
-tracker.colorSetup()
-tracker.initiateVideo()
+if __name__ == '__main__':
+    tracker = ColorTracker()
+    tracker.colorSetup()
+    tracker.initiateVideo()
 
-coms = Communication()
-coms.begin()
+    coms = Communication()
+    coms.begin()
 
 tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
 tracking_thread.daemon = True
@@ -224,38 +251,32 @@ tracking_thread.start()
 
 running = True
 
-while running:
-    if (coms.manual_mode):
-        if keyboard.is_pressed('a'):
-            #coms.comunicacion('L\n')
-            coms.comunicacion('200,1,200,-1\n')
-        elif keyboard.is_pressed('d'):
-            #coms.comunicacion('R\n')
-            coms.comunicacion('200,-1,200,1\n')
-        elif keyboard.is_pressed('w'):
-            #coms.comunicacion('U\n')
-            coms.comunicacion('200,1,200,1\n')
-        elif keyboard.is_pressed('s'):
-            #coms.comunicacion('D\n')
-            coms.comunicacion('200,-1,200,-1\n')
-        elif keyboard.is_pressed('p'):
-            coms.comunicacion('S\n')
-        elif keyboard.is_pressed('q'):
-            coms.comunicacion('0,1,0,1\n')
-        elif keyboard.is_pressed('m'):
-            #coms.switch_mode()
-            tracker.show = True
-    else:
+    while running:
         ret, frame = tracker.cap.read()
         if ret:
-            distancia = tracker.distancia
-            control.make_control(distancia)
-            control_signal = control.get_control()
-            print(control_signal)
-            coms.comunicacion(control_signal)
-    if keyboard.is_pressed('x'):
-        running = False
-        print("Stopped")
+            if (coms.manual_mode):
+                if keyboard.is_pressed('a'):
+                    coms.comunicacion('L\n')
+                elif keyboard.is_pressed('d'):
+                    coms.comunicacion('R\n')
+                elif keyboard.is_pressed('w'):
+                    coms.comunicacion('U\n')
+                elif keyboard.is_pressed('s'):
+                    coms.comunicacion('D\n')
+                elif keyboard.is_pressed('p'):
+                    coms.comunicacion('S\n')
+                elif keyboard.is_pressed('m'):
+                    coms.switch_mode()
+                    tracker.show = True
+            else:
+                distancia = tracker.distancia
+                control.make_control(distancia)
+                control_signal = control.get_control()
+                print(control_signal)
+                coms.comunicacion(control_signal)
+        if keyboard.is_pressed('x'):
+            running = False
+            print("Stopped")
     
     tracker.stop_tracking()
     tracker.finish()
