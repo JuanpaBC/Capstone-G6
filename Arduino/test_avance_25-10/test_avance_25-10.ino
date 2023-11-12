@@ -319,6 +319,11 @@ void doEncoderB2()
         encoderBPos++;
     }
 }
+int binaryToInt(int b3, int b2, int b1, int b0)
+{
+    int decimal = b3 * 8 + b2 * 4 + b1 * 2 + b0;
+    return decimal;
+}
 
 void readGPIO()
 {
@@ -329,8 +334,5 @@ void readGPIO()
     mode_1 = digitalRead(p4);
     mode_2 = digitalRead(p5);
     mode_3 = digitalRead(p6);
-    int pwm_value = pwm; // convert byte to int
-}int binaryToInt(int b3, int b2, int b1, int b0) {
-    int decimal = b3 * 8 + b2 * 4 + b1 * 2 + b0;
-    return decimal;
+    int pwm = binaryToInt(b3, b2, b1, b0); // convert byte to int
 }
