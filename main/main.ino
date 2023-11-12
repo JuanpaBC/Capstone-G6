@@ -311,11 +311,11 @@ void loop() {
 
   if(auto_mode){
     if(msg != ""){
-      digitalWrite(redLed, HIGH);
       stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
     }
 
-    if(left_dir_value == -1){
+    if(left_dir_value == 0){
+      digitalWrite(redLed, HIGH);
       digitalWrite(AIN1, LOW);
       digitalWrite(AIN2, HIGH);
     }
@@ -325,8 +325,7 @@ void loop() {
     }
     analogWrite(ENA, left_pwm_value);
 
-
-    if(right_dir_value == -1){
+    if(right_dir_value == 0){
       digitalWrite(BIN1, LOW);
       digitalWrite(BIN2, HIGH);
     }

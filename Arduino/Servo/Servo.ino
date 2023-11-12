@@ -1,5 +1,3 @@
-#include <IRremote.h>
-
 #include <Servo.h>
 
 #define IRLed 7
@@ -38,19 +36,11 @@ void setup() {
   servo.attach(servoPin);
   servo.write(angle);
 
-  pinMode(IRLed, OUTPUT);
-  IrReceiver.begin(IRsensorPin, ENABLE_LED_FEEDBACK);  
-
-  analogWrite(IRLed, 200);
+  scoop();
 
   Serial.begin(115200);
 }
 
 
 void loop() { 
-  if (IrReceiver.decode()){
-    Serial.println("a");
-    IrReceiver.printIRResultShort(&Serial);
-    IrReceiver.resume();
-  }
 }

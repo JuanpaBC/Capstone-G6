@@ -167,7 +167,7 @@ class Pid:
         self.Kp = 7
         self.Ki = 0.01
         self.Kd = 0.00008
-        self.tol = 10 # tolerancia a error
+        self.tol = 50 # tolerancia a error
         self.min_C = 120
         self.max_C = 255
         self.C_lin = 200
@@ -208,7 +208,7 @@ class Pid:
             self.motor_R = - self.C_lin
 
     def get_control(self):
-        return str(abs(self.motor_R)) + "," + str(np.sign(self.motor_R)) + "," + str(abs(self.motor_L)) + "," + str(np.sign(self.motor_L));
+        return str(int(abs(self.motor_R))) + "," + str(int(np.sign(self.motor_R)+1)) + "," + str(int(abs(self.motor_L))) + "," + str(int(np.sign(self.motor_L)+1));
 
 
 if __name__ == '__main__':

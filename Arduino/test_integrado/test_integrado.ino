@@ -298,7 +298,7 @@ void loop()
         if ((micros() - ref_time) * 0.000001 > 3)
         {
             ref_time = micros();
-            Doblar_derecha(PWM);
+            Doblar_derecha(150);
             state = 4;
         }
         break;
@@ -315,7 +315,7 @@ void loop()
         if ((micros() - ref_time) * 0.000001 > 3)
         {
             ref_time = micros();
-            Doblar_izquierda(PWM);
+            Doblar_izquierda(150);
             state = 6;
         }
         break;
