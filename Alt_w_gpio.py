@@ -148,6 +148,7 @@ class rpi_gpio:
         self.b3 = 27
         self.mode_1 = 22
         self.mode_2 = 10
+        self.mode_3 = 9
         
         
         
@@ -163,6 +164,7 @@ class rpi_gpio:
         GPIO.setup(self.b3, GPIO.OUT)
         GPIO.setup(self.mode_1, GPIO.OUT)
         GPIO.setup(self.mode_2, GPIO.OUT)
+        GPIO.setup(self.mode_3, GPIO.OUT)
         
     def set_duty(self, duty):
         self.duty = duty

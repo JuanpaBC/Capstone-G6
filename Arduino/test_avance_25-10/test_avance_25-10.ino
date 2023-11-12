@@ -1,10 +1,4 @@
-/*
-  TB6612FNG-Dual-Driver
-  made on 28 oct 2020
-  by Amir Mohammad Shojaee @ Electropeak
-  Home
 
-*/
 
 #define ENA 9 // D6
 #define ENB 6
@@ -23,6 +17,9 @@
 #define BC2 12
 
 #define switchPin 1
+
+// GPIO comunication with raspberry
+#define interruptPin 2
 
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
@@ -56,132 +53,10 @@ const int Period = 10000; // 10 ms = 100Hz
 //const int Debounce = 500000; // 500ms
 //unsigned long pressed_time = 0;
 
-// ************** Función para avanzar ***************
-void Atras(int pwm_ref)
-{
-    Serial.println("Adelante");
-    // Avanzar motor A
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
-}
 
-// ************** Función para parar ***************
-void Parar()
-{
-    Serial.println("Parar");
-    // Detener motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, 0);
 
-    // Detener motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, 0);
-}
-// ************** Función para ir hacia atras ***************
 
-void Avanzar(int pwm_ref)
-{
-    Serial.println("Atras");
-    // Retroceder motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
 
-    // Retroceder motor B
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
-}
-
-// ************** Función para doblar a la derecha ***************
-void Doblar_derecha(int pwm_ref)
-{
-    Serial.println("Doblar Derecha");
-    // Avanzar motor A
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
-}
-
-// ************** Función para doblar a la izquierda ***************
-void Doblar_izquierda(int pwm_ref)
-{
-    Serial.println("Doblar Izquierda");
-    // Avanzar motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
-}
-
-void doEncoderA1()
-{
-    Serial.println(encoderAPos);
-    if (digitalRead(AC1) == digitalRead(AC2))
-    {
-        encoderAPos++;
-    }
-    else
-    {
-        encoderAPos--;
-    }
-}
-
-void doEncoderA2()
-{
-    Serial.println(encoderAPos);
-    if (digitalRead(AC1) == digitalRead(AC2))
-    {
-        encoderAPos--;
-    }
-    else
-    {
-        encoderAPos++;
-    }
-}
-
-void doEncoderB1()
-{
-    Serial.println(encoderBPos);
-    if (digitalRead(BC1) == digitalRead(BC2))
-    {
-        encoderBPos++;
-    }
-    else
-    {
-        encoderBPos--;
-    }
-}
-
-void doEncoderB2()
-{
-    Serial.println(encoderBPos);
-    if (digitalRead(BC1) == digitalRead(BC2))
-    {
-        encoderBPos--;
-    }
-    else
-    {
-        encoderBPos++;
-    }
-}
 
 void setup()
 {
@@ -210,6 +85,7 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(BC1), doEncoderB1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(BC2), doEncoderB2, CHANGE); // encoder 0 PIN B
 
+    attachInterrupt(digitalPinToInterrupt(interruptPin), readGPIO, RISING);
     Serial.begin(115200);
 }
 
@@ -239,50 +115,7 @@ void loop()
         time_ant = newtime;
 
         Serial.println(digitalRead(AC1));
-        /*Serial.print(vueltas_ruedasA);
-        Serial.print(" vueltas A, ");
-        Serial.print(vueltas_ruedasB);
-        Serial.print(" vueltas B, ");
-        Serial.print(velA);
-        Serial.print(" RPM A, ");
-        Serial.print(velB);
-        Serial.print(" RPM B, ");
-        Serial.print(avance);
-        Serial.print(" cm de avance, ");
-        Serial.print((float)newtime * 0.000001);
-        Serial.print(" s.");
-        Serial.print(state);
-        Serial.println(" Estado");*/
-
-    }
-
-    //enable = digitalRead(switchPin);
-    //btnState = digitalRead(btnPin);
-
-    /*if (btnState == HIGH && !pressed) {
-        Serial.println("**Pressing**");
-        enable = !enable;
-        Serial.println(enable);
-        pressed = true;
-        pressed_time = micros();
-    }
-
-    now = micros();
-
-    if ((now - pressed_time) >= Debounce){
-      Serial.println("**Debounced**");
-      pressed = false;
-      pressed_time = 0;
-    }*/
-
-    /*if(enable == HIGH){
-      Serial.println("--Prendido--");
-      state = 0;
-    } else{
-      Serial.println("--Apagado--");
-      Parar();
-      state = 7;
-    }*/
+  
     switch (state)
     {
     case 0:
@@ -358,4 +191,148 @@ void loop()
     default:
         break;
     }
+}
+
+// ************** Función para avanzar ***************
+void Atras(int pwm_ref)
+{
+    Serial.println("Adelante");
+    // Avanzar motor A
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
+    analogWrite(ENA, pwm_ref);
+
+    // Avanzar motor B
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
+    analogWrite(ENB, pwm_ref);
+}
+
+// ************** Función para parar ***************
+void Parar()
+{
+    Serial.println("Parar");
+    // Detener motor A
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, LOW);
+    analogWrite(ENA, 0);
+
+    // Detener motor B
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, LOW);
+    analogWrite(ENB, 0);
+}
+// ************** Función para ir hacia atras ***************
+
+void Avanzar(int pwm_ref)
+{
+    Serial.println("Atras");
+    // Retroceder motor A
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
+    analogWrite(ENA, pwm_ref);
+
+    // Retroceder motor B
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
+    analogWrite(ENB, pwm_ref);
+}
+
+// ************** Función para doblar a la derecha ***************
+void Doblar_derecha(int pwm_ref)
+{
+    Serial.println("Doblar Derecha");
+    // Avanzar motor A
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
+    analogWrite(ENA, pwm_ref);
+
+    // Avanzar motor B
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
+    analogWrite(ENB, pwm_ref);
+}
+
+// ************** Función para doblar a la izquierda ***************
+void Doblar_izquierda(int pwm_ref)
+{
+    Serial.println("Doblar Izquierda");
+    // Avanzar motor A
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
+    analogWrite(ENA, pwm_ref);
+
+    // Avanzar motor B
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
+    analogWrite(ENB, pwm_ref);
+}
+
+void doEncoderA1()
+{
+    Serial.println(encoderAPos);
+    if (digitalRead(AC1) == digitalRead(AC2))
+    {
+        encoderAPos++;
+    }
+    else
+    {
+        encoderAPos--;
+    }
+}
+
+void doEncoderA2()
+{
+    Serial.println(encoderAPos);
+    if (digitalRead(AC1) == digitalRead(AC2))
+    {
+        encoderAPos--;
+    }
+    else
+    {
+        encoderAPos++;
+    }
+}
+
+void doEncoderB1()
+{
+    Serial.println(encoderBPos);
+    if (digitalRead(BC1) == digitalRead(BC2))
+    {
+        encoderBPos++;
+    }
+    else
+    {
+        encoderBPos--;
+    }
+}
+
+void doEncoderB2()
+{
+    Serial.println(encoderBPos);
+    if (digitalRead(BC1) == digitalRead(BC2))
+    {
+        encoderBPos--;
+    }
+    else
+    {
+        encoderBPos++;
+    }
+}
+int binaryToInt(int b3, int b2, int b1, int b0)
+{
+    int decimal = b3 * 8 + b2 * 4 + b1 * 2 + b0;
+    return decimal;
+}
+
+void readGPIO()
+{
+    b0 = digitalRead(p0);
+    b1 = digitalRead(p1);
+    b2 = digitalRead(p2);
+    b3 = digitalRead(p3);
+    mode_1 = digitalRead(p4);
+    mode_2 = digitalRead(p5);
+    mode_3 = digitalRead(p6);
+    int pwm = binaryToInt(b3, b2, b1, b0); // convert byte to int
 }
