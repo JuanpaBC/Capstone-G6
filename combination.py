@@ -48,7 +48,7 @@ class ColorTracker:
             self.phMin = self.psMin = self.pvMin = self.phMax = self.psMax = self.pvMax = 0
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
 
     def track(self):
         while self.tracking:
@@ -87,7 +87,7 @@ class ColorTracker:
 
                 for c in contornos:
                     area = cv2.contourArea(c)
-                    if area > 1000:
+                    if area > 300:
                         M = cv2.moments(c)
                         if M["m00"] == 0:
                             M["m00"] = 1
@@ -102,7 +102,9 @@ class ColorTracker:
                         if self.mostrar_contorno:
                             cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
                         self.distancia = str(x - frame.shape[1] * 0.5)
-                        # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")
+                        # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")}
+                if len(contornos) == 0:
+                    self.distancia = "0"
                 if self.show:
                     cv2.imshow('frame', frame)
                 if cv2.waitKey(1) & 0xFF == ord('s'):
@@ -131,11 +133,11 @@ class Communication:
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
     
-    def comunicacion(self, distancia):
+    def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
-        print(f'Enviando mensaje {distancia}')
+        print(f'Enviando mensaje {mensaje}')
         if self.arduino.isOpen():
-            self.arduino.write(distancia.encode('utf-8'))
+            self.arduino.write(mensaje.encode('utf-8'))
         if self.manual_mode:
             # Wait for an acknowledgment response from Arduino
             time.sleep(5)
@@ -165,10 +167,10 @@ class Pid:
     def __init__(self):
         self.Ts = 0.2 # time sample
         self.Kp = 5
-        self.Ki = 0.01
-        self.Kd = 0.00008
+        self.Kd = 0.01
+        self.Ki = 0.00008
         self.tol = 50 # tolerancia a error
-        self.min_C = 120
+        self.min_C = 180
         self.max_C = 255
         self.C_lin = 200
         
@@ -192,8 +194,10 @@ class Pid:
         if abs(self.C) < self.min_C:
             self.C = np.sign(self.C) * self.min_C
         self.C =  np.sign(self.C) * int(self.C)
-
+        
+        
     def make_control(self, distancia):
+        print("dist",distancia)
         error = float(distancia)
         if abs(error) > self.tol:
             self.update(error)
@@ -204,6 +208,11 @@ class Pid:
                 self.motor_L = - self.C
                 self.motor_R = self.C
         else:
+            #is alligned
+            self.motor_L = 150
+            self.motor_R = 150
+        if (distancia == "0"):
+            #there is not objective
             self.motor_L = 0
             self.motor_R = 0
 
@@ -251,6 +260,7 @@ while running:
         ret, frame = tracker.cap.read()
         if ret:
             distancia = tracker.distancia
+            print(distancia)
             control.make_control(distancia)
             control_signal = control.get_control()
             print(control_signal)
