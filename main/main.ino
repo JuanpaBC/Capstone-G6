@@ -1,9 +1,9 @@
 #include <Servo.h> //Imports the library Servo
 
-#define TRIGGERING 3 // Sensor light pin
-#define ECHO 2 // Sensor receptor pin
+#define trigPin 3 // TriggerSensor
+#define echoPin 2 // EchoSensor
 
-#define SP 8 // Servo pin
+#define ServoPin 8 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15
@@ -25,8 +25,6 @@
 
 #define redLed 51
 
-#define servoPin 8
-
 int right_pwm_value;
 int right_dir_value;
 int left_pwm_value;
@@ -35,15 +33,15 @@ Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
 
 // Python commands
-String left = "L";
-String right = "R";
-String forward = "U";
-String backwards = "D";
-String scoopeSignal = "S";
-String manual = "M";
-String automatic = "N";
+char left[] = "L";
+char right[] = "R";
+char forward[] = "U";
+char backwards[] = "D";
+char scoopeSignal[] = "S";
+char manual[] = "M";
+char automatic[] = "N";
 
-String msg;
+char msg[40];
 bool auto_mode = true;
 
 int d = 23; // mm of wheel
@@ -221,27 +219,23 @@ void scoop()
 }
 
 void readSerialPort() {
-  msg = "";
+  memset(msg, 0, sizeof(msg));  // Clear the msg array
   if (Serial.available()) {
-      delay(10);
-      while (Serial.available() > 0) {
-          msg += (char)Serial.read();
-      }
-      Serial.flush();
+    delay(10);
+    int i = 0;
+    while (Serial.available() > 0 && i < sizeof(msg) - 1) {
+      msg[i++] = Serial.read();
+    }
+    Serial.flush();
   }
 }
 
-void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir){
-  char inputBuffer[20];
-  // Copy the string into a character array
-  msg.toCharArray(inputBuffer, sizeof(inputBuffer));
+void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir) {
+  char *token = strtok(msg, ",");
 
-  // Initialize strtok with the comma as the delimiter
-  char *token = strtok(inputBuffer, ",");
-
-  for(int i=0; i<4; i++) {
-    int intValue = atoi(token); // Convert the token to an integer
-    switch (i){
+  for (int i = 0; i < 4; i++) {
+    int intValue = atoi(token);
+    switch (i) {
       case 0:
         *right_pwm = intValue;
         break;
@@ -255,6 +249,21 @@ void stringSplitter(String msg, int *right_pwm, int *right_dir, int *left_pwm, i
         *left_dir = intValue;
         break;
     }
+    token = strtok(NULL, ",");
+  }
+}
+void checkDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  unsigned long duration = pulseIn(echoPin, HIGH);
+  float distance = duration * 0.034 / 2;
+
+  if (auto_mode && distance < 10) {
+    scoop();
   }
 }
 
@@ -264,7 +273,7 @@ void setup() {
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
 
-    servo.attach(SP);    // States that the servo is attached to pin 5
+    servo.attach(ServoPin);    // States that the servo is attached to pin 5
     servo.write(angle); // Sets the servo angle to 0 degrees
 
     pinMode(ENA, OUTPUT);
@@ -308,11 +317,12 @@ void loop() {
   }
 
   if(auto_mode){
-    if(msg != ""){
+    if(msg[0] != '\0') {
       stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
     }
+    checkDistance();
 
-    if(left_dir_value == 0){
+    if(left_dir_value == -1){
       digitalWrite(redLed, HIGH);
       digitalWrite(AIN1, LOW);
       digitalWrite(AIN2, HIGH);
@@ -323,7 +333,7 @@ void loop() {
     }
     analogWrite(ENA, left_pwm_value);
 
-    if(right_dir_value == 0){
+    if(right_dir_value == 1){
       digitalWrite(BIN1, LOW);
       digitalWrite(BIN2, HIGH);
     }
@@ -350,9 +360,9 @@ void loop() {
     else if(msg == scoopeSignal){
       scoop();
     }
-    else if(msg == "") {
+    else if(msg[0] == '\0') {
       Parar();
     }
   }
-  msg = "";
+  strcpy(msg, "");
 }

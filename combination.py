@@ -123,7 +123,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM7"
+        self.target_W = "COM4"
         self.target_L = '/dev/ttyACM0'
 
     def begin(self):
