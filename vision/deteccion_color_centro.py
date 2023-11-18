@@ -2,8 +2,6 @@ import cv2
 import numpy as np
 
 mostrar_contorno = False
-setear_colores = False
-clickear_color = True
 
 # Se define una matriz de numpy con valor de color inicial de 0 para la variable color1_hsv
 color1_hsv = np.array([0,0,0])
@@ -20,40 +18,46 @@ def _mouseEvent(event, x, y, flags, param):
         # Se convierte el frame capturado a formato HSV
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         color1_hsv = hsv_frame[y,x]
-        print("Color clickeado: ",color1_hsv )
+        # print("Color clickeado: ",color1_hsv )
+        cv2.setTrackbarPos('HMax', 'image', color1_hsv[0] + UpperColorError[0])
+        cv2.setTrackbarPos('SMax', 'image', color1_hsv[1] + UpperColorError[1])
+        cv2.setTrackbarPos('VMax', 'image', 255)
+        cv2.setTrackbarPos('HMin', 'image', color1_hsv[0] + LowerColorError[0])
+        cv2.setTrackbarPos('SMin', 'image', color1_hsv[1] + LowerColorError[1])
+        cv2.setTrackbarPos('VMin', 'image', color1_hsv[2] + LowerColorError[2])
+        
 
 def nothing(x):
     pass
 
-if setear_colores:
-    # Load image
-    image = cv2.imread('hsv_color_map.png')
+# Load image
+image = cv2.imread('hsv_color_map.png')
 
-    # Create a window
-    cv2.namedWindow('image')
-    cv2.resizeWindow('image', 640, 480)	
-    cv2.moveWindow('image', 700, 100)
+# Create a window
+cv2.namedWindow('image')
+cv2.resizeWindow('image', 540, 480)	
+cv2.moveWindow('image', 700, 100)
 
-    # Create trackbars for color change
-    # Hue is from 0-179 for Opencv
-    cv2.createTrackbar('HMin', 'image', 0, 179, nothing)
-    cv2.createTrackbar('SMin', 'image', 0, 255, nothing)
-    cv2.createTrackbar('VMin', 'image', 0, 255, nothing)
-    cv2.createTrackbar('HMax', 'image', 0, 179, nothing)
-    cv2.createTrackbar('SMax', 'image', 0, 255, nothing)
-    cv2.createTrackbar('VMax', 'image', 0, 255, nothing)
+# Create trackbars for color change
+# Hue is from 0-179 for Opencv
+cv2.createTrackbar('HMin', 'image', 0, 179, nothing)
+cv2.createTrackbar('SMin', 'image', 0, 255, nothing)
+cv2.createTrackbar('VMin', 'image', 0, 255, nothing)
+cv2.createTrackbar('HMax', 'image', 0, 179, nothing)
+cv2.createTrackbar('SMax', 'image', 0, 255, nothing)
+cv2.createTrackbar('VMax', 'image', 0, 255, nothing)
 
-    # Set default value for Max HSV trackbars
-    cv2.setTrackbarPos('HMax', 'image', 96)
-    cv2.setTrackbarPos('SMax', 'image', 255)
-    cv2.setTrackbarPos('VMax', 'image', 255)
-    cv2.setTrackbarPos('HMin', 'image', 49)
-    cv2.setTrackbarPos('SMin', 'image', 45)
-    cv2.setTrackbarPos('VMin', 'image', 0)
+# Set default value for Max HSV trackbars
+cv2.setTrackbarPos('HMax', 'image', 96)
+cv2.setTrackbarPos('SMax', 'image', 255)
+cv2.setTrackbarPos('VMax', 'image', 255)
+cv2.setTrackbarPos('HMin', 'image', 49)
+cv2.setTrackbarPos('SMin', 'image', 45)
+cv2.setTrackbarPos('VMin', 'image', 0)
 
-    # Initialize HSV min/max values h49 s85
-    hMin = sMin = vMin = hMax = sMax = vMax = 0
-    phMin = psMin = pvMin = phMax = psMax = pvMax = 0
+# Initialize HSV min/max values h49 s85
+hMin = sMin = vMin = hMax = sMax = vMax = 0
+phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 
 
 cap = cv2.VideoCapture(0)
@@ -68,40 +72,30 @@ cv2.namedWindow('frame',  cv2.WINDOW_NORMAL )
 cv2.resizeWindow('frame', 640, 480)
 cv2.moveWindow('frame', 30, 100)
 
-if clickear_color:
-    # Se establece el método de captura de eventos del mouse
-    cv2.setMouseCallback('frame',_mouseEvent)
+# Se establece el método de captura de eventos del mouse
+cv2.setMouseCallback('frame',_mouseEvent)
 
 while True:
 
-    if setear_colores:
-        # Get current positions of all trackbars
-        hMin = cv2.getTrackbarPos('HMin', 'image')
-        sMin = cv2.getTrackbarPos('SMin', 'image')
-        vMin = cv2.getTrackbarPos('VMin', 'image')
-        hMax = cv2.getTrackbarPos('HMax', 'image')
-        sMax = cv2.getTrackbarPos('SMax', 'image')
-        vMax = cv2.getTrackbarPos('VMax', 'image')
+    # Get current positions of all trackbars
+    hMin = cv2.getTrackbarPos('HMin', 'image')
+    sMin = cv2.getTrackbarPos('SMin', 'image')
+    vMin = cv2.getTrackbarPos('VMin', 'image')
+    hMax = cv2.getTrackbarPos('HMax', 'image')
+    sMax = cv2.getTrackbarPos('SMax', 'image')
+    vMax = cv2.getTrackbarPos('VMax', 'image')
 
-        # Set minimum and maximum HSV values to display
-        lower = np.array([hMin, sMin, vMin])
-        upper = np.array([hMax, sMax, vMax])
+    # Set minimum and maximum HSV values to display
+    lower = np.array([hMin, sMin, vMin])
+    upper = np.array([hMax, sMax, vMax])
 
-        # Convert to HSV format and color threshold
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, lower, upper)
-        result = cv2.bitwise_and(image, image, mask=mask)
+    # Convert to HSV format and color threshold
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, lower, upper)
+    result = cv2.bitwise_and(image, image, mask=mask)
 
-        
-        cv2.imshow('image', result)
-    elif clickear_color:
-        # Se definen los límites de color permitidos para la detección de objetos
-        lower = color1_hsv + LowerColorError
-        upper = color1_hsv + UpperColorError
-        # print(f"Lower: {lower}, Upper: {upper}")
-    else:    
-        lower = np.array([49, 45, 0], np.uint8)
-        upper = np.array([96, 255, 255], np.uint8)
+    
+    cv2.imshow('image', result)
 
     ret, frame = cap.read()
     
@@ -129,7 +123,7 @@ while True:
                 
                 if mostrar_contorno:
                     cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
-                #print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
+                print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
         # cv2.imshow('maskAzul', mask)
         # cv2.imshow('maskVerde', mask)
         cv2.imshow('frame', frame)
