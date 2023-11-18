@@ -3,6 +3,24 @@ import numpy as np
 
 mostrar_contorno = False
 setear_colores = False
+clickear_color = True
+
+# Se define una matriz de numpy con valor de color inicial de 0 para la variable color1_hsv
+color1_hsv = np.array([0,0,0])
+# Se definen los rangos de colores permitidos para la detección de objetos
+LowerColorError = np.array([-40,-45,-75]) 
+UpperColorError = np.array([40,45,75])  
+
+# Se define una función que maneja los eventos del mouse
+def _mouseEvent(event, x, y, flags, param):
+	# Se declaran las variables globales que se van a utilizar
+    global color1_hsv
+    # Si se presiona el botón izquierdo del mouse
+    if event == cv2.EVENT_LBUTTONDOWN:
+        # Se convierte el frame capturado a formato HSV
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        color1_hsv = hsv_frame[y,x]
+        print("Color clickeado: ",color1_hsv )
 
 def nothing(x):
     pass
@@ -13,6 +31,8 @@ if setear_colores:
 
     # Create a window
     cv2.namedWindow('image')
+    cv2.resizeWindow('image', 640, 480)	
+    cv2.moveWindow('image', 700, 100)
 
     # Create trackbars for color change
     # Hue is from 0-179 for Opencv
@@ -44,6 +64,14 @@ cap = cv2.VideoCapture(0)
 # verdeBajo = np.array([40, 120, 20], np.uint8)
 # verdeAlto = np.array([120, 210, 255], np.uint8)
 
+cv2.namedWindow('frame',  cv2.WINDOW_NORMAL )	
+cv2.resizeWindow('frame', 640, 480)
+cv2.moveWindow('frame', 30, 100)
+
+if clickear_color:
+    # Se establece el método de captura de eventos del mouse
+    cv2.setMouseCallback('frame',_mouseEvent)
+
 while True:
 
     if setear_colores:
@@ -66,6 +94,11 @@ while True:
 
         
         cv2.imshow('image', result)
+    elif clickear_color:
+        # Se definen los límites de color permitidos para la detección de objetos
+        lower = color1_hsv + LowerColorError
+        upper = color1_hsv + UpperColorError
+        # print(f"Lower: {lower}, Upper: {upper}")
     else:    
         lower = np.array([49, 45, 0], np.uint8)
         upper = np.array([96, 255, 255], np.uint8)
@@ -96,7 +129,7 @@ while True:
                 
                 if mostrar_contorno:
                     cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
-                print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
+                #print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
         # cv2.imshow('maskAzul', mask)
         # cv2.imshow('maskVerde', mask)
         cv2.imshow('frame', frame)
