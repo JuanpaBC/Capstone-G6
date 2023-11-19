@@ -5,6 +5,7 @@ import time
 import keyboard
 import threading
 
+
 class ColorTracker:
     def __init__(self):
         self.setear_colores = False
@@ -12,8 +13,8 @@ class ColorTracker:
         self.cap = None
         self.image = None
         self.distancia = "0"
-        self.tracking = True
-        self.show = True
+        self.tracking = False
+        self.show = False
 
     def nothing(self, x):
         pass
@@ -48,7 +49,7 @@ class ColorTracker:
             self.phMin = self.psMin = self.pvMin = self.phMax = self.psMax = self.pvMax = 0
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
 
     def track(self):
         while self.tracking:
@@ -95,12 +96,15 @@ class ColorTracker:
                         y = int(M["m01"] / M["m00"])
                         cv2.circle(frame, (x, y), 7, (255, 0, 255), -1)
                         font = cv2.FONT_HERSHEY_SIMPLEX
-                        cv2.putText(frame, '{},{}'.format(x, y), (x+10, y), font, 0.75, (255, 0, 255), 1, cv2.LINE_AA)
+                        cv2.putText(frame, '{},{}'.format(
+                            x, y), (x+10, y), font, 0.75, (255, 0, 255), 1, cv2.LINE_AA)
                         nuevoContorno = cv2.convexHull(c)
-                        cv2.circle(frame, (x, y), max(nuevoContorno[:, 0, 0].tolist()) - x, (0, 0, 255), 2)
+                        cv2.circle(frame, (x, y), max(
+                            nuevoContorno[:, 0, 0].tolist()) - x, (0, 0, 255), 2)
 
                         if self.mostrar_contorno:
-                            cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
+                            cv2.drawContours(
+                                frame, [nuevoContorno], 0, (0, 255, 0), 3)
                         self.distancia = str(x - frame.shape[1] * 0.5)
                         # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")}
                 if len(contornos) == 0:
@@ -121,24 +125,24 @@ class ColorTracker:
 class Communication:
     def __init__(self) -> None:
         self.mostrar_contorno = False
-        self.manual_mode = False
+        self.manual_mode = True
         self.starts = False
         self.target_W = "COM4"
         self.target_L = '/dev/ttyACM0'
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_W, 115200, timeout=1)
+        self.arduino = serial.Serial(self.target_L, 115200, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
-    
+
     def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
         print(f'Enviando mensaje {mensaje}')
         if self.arduino.isOpen():
             self.arduino.write(mensaje.encode('utf-8'))
-        if self.manual_mode:
+        if False:  # self.manual_mode:
             # Wait for an acknowledgment response from Arduino
             time.sleep(5)
             response = self.arduino.readline().decode('utf-8').strip()
@@ -165,15 +169,15 @@ def track_wrapper(tracker):
 
 class Pid:
     def __init__(self):
-        self.Ts = 0.2 # time sample
+        self.Ts = 0.2  # time sample
         self.Kp = 5
         self.Kd = 0.01
         self.Ki = 0.00008
-        self.tol = 50 # tolerancia a error
+        self.tol = 50  # tolerancia a error
         self.min_C = 180
         self.max_C = 255
         self.C_lin = 200
-        
+
         self.ref = 0
         self.E = 0
         self.E_ = 0
@@ -188,16 +192,16 @@ class Pid:
         self.E_ = self.E
         self.E = error
         self.C_ = self.C
-        self.C = self.C_ + (self.Kp + self.Ts*self.Ki + self.Kd/self.Ts)*self.E + (-self.Kp - 2*self.Kd/self.Ts)*self.E_ + (self.Kd/self.Ts)*self.E__
+        self.C = self.C_ + (self.Kp + self.Ts*self.Ki + self.Kd/self.Ts)*self.E + \
+            (-self.Kp - 2*self.Kd/self.Ts)*self.E_ + (self.Kd/self.Ts)*self.E__
         if abs(self.C) > self.max_C:
             self.C = np.sign(self.C) * self.max_C
         if abs(self.C) < self.min_C:
             self.C = np.sign(self.C) * self.min_C
-        self.C =  np.sign(self.C) * int(self.C)
-        
-        
+        self.C = np.sign(self.C) * int(self.C)
+
     def make_control(self, distancia):
-        print("dist",distancia)
+        print("dist", distancia)
         error = float(distancia)
         if abs(error) > self.tol:
             self.update(error)
@@ -208,16 +212,16 @@ class Pid:
                 self.motor_L = - self.C
                 self.motor_R = self.C
         else:
-            #is alligned
+            # is alligned
             self.motor_L = 150
             self.motor_R = 150
         if (distancia == "0"):
-            #there is not objective
+            # there is not objective
             self.motor_L = 0
             self.motor_R = 0
 
     def get_control(self):
-        return str(int(abs(self.motor_R))) + "," + str(int(np.sign(self.motor_R))) + "," + str(int(abs(self.motor_L))) + "," + str(int(np.sign(self.motor_L)));
+        return str(int(abs(self.motor_R))) + "," + str(int(np.sign(self.motor_R))) + "," + str(int(abs(self.motor_L))) + "," + str(int(np.sign(self.motor_L)))
 
 
 tracker = ColorTracker()
@@ -238,16 +242,16 @@ running = True
 while running:
     if (coms.manual_mode):
         if keyboard.is_pressed('a'):
-            #coms.comunicacion('L\n')
+            # coms.comunicacion('L\n')
             coms.comunicacion('200,1,200,-1\n')
         elif keyboard.is_pressed('d'):
-            #coms.comunicacion('R\n')
+            # coms.comunicacion('R\n')
             coms.comunicacion('200,-1,200,1\n')
         elif keyboard.is_pressed('w'):
-            #coms.comunicacion('U\n')
+            # coms.comunicacion('U\n')
             coms.comunicacion('200,1,200,1\n')
         elif keyboard.is_pressed('s'):
-            #coms.comunicacion('D\n')
+            # coms.comunicacion('D\n')
             coms.comunicacion('200,-1,200,-1\n')
         elif keyboard.is_pressed('p'):
             coms.comunicacion('S\n')
@@ -268,6 +272,6 @@ while running:
     if keyboard.is_pressed('x'):
         running = False
         print("Stopped")
-    
+
 tracker.stop_tracking()
 tracker.finish()
