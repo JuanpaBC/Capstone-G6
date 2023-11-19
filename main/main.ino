@@ -76,6 +76,8 @@ const int Period = 10000; // 10 ms = 100Hz
 //const int Debounce = 500000; // 500ms
 //unsigned long pressed_time = 0;
 
+volatile bool scoopFlag = false; 
+
 // ************** Función para retroceder ***************
 void Atras(int pwm_ref)
 {
@@ -252,7 +254,11 @@ void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, in
     token = strtok(NULL, ",");
   }
 }
+
+
 void checkDistance() {
+
+
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -320,8 +326,6 @@ void loop() {
     if(msg[0] != '\0') {
       stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
     }
-    checkDistance();
-
     if(left_dir_value == -1){
       digitalWrite(redLed, HIGH);
       digitalWrite(AIN1, LOW);
@@ -346,6 +350,7 @@ void loop() {
   else {
     digitalWrite(redLed, LOW);
     if(msg == forward){
+      checkDistance();
       Avanzar(PWM);
     }
     else if(msg == backwards){
