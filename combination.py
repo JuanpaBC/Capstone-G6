@@ -4,6 +4,7 @@ import serial
 import time
 import keyboard
 import threading
+import os
 
 
 class ColorTracker:
@@ -13,8 +14,8 @@ class ColorTracker:
         self.cap = None
         self.image = None
         self.distancia = "0"
-        self.tracking = False
-        self.show = False
+        self.tracking = True
+        self.show = True
 
     def nothing(self, x):
         pass
@@ -49,7 +50,7 @@ class ColorTracker:
             self.phMin = self.psMin = self.pvMin = self.phMax = self.psMax = self.pvMax = 0
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
 
     def track(self):
         while self.tracking:
@@ -74,8 +75,21 @@ class ColorTracker:
                 if self.show:
                     cv2.imshow('image', result)
             else:
-                lower = np.array([49, 45, 0], np.uint8)
-                upper = np.array([96, 255, 255], np.uint8)
+                try:
+                    file_path = os.path.join('vision', 'valores_lower_upper.txt')
+                    with open(file_path, 'r') as file:
+                        lines = file.readlines()
+                        lower_line = lines[0].strip().split(': ')[1].replace('[', '').replace(']', '')
+                        upper_line = lines[1].strip().split(': ')[1].replace('[', '').replace(']', '')
+
+                        # Convierte los valores de string a numpy arrays
+                        lower = np.array([int(x) for x in lower_line.split(',')])
+                        upper = np.array([int(x) for x in upper_line.split(',')])
+
+                except FileNotFoundError:
+                    # Si el archivo no se encuentra, utiliza valores predeterminados
+                    lower = np.array([49, 45, 0], np.uint8)
+                    upper = np.array([96, 255, 255], np.uint8)
 
             ret, frame = self.cap.read()
 
@@ -131,7 +145,7 @@ class Communication:
         self.target_L = '/dev/ttyACM0'
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_L, 115200, timeout=1)
+        self.arduino = serial.Serial(self.target_W, 115200, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))

@@ -75,59 +75,67 @@ cv2.moveWindow('frame', 30, 100)
 # Se establece el método de captura de eventos del mouse
 cv2.setMouseCallback('frame',_mouseEvent)
 
-while True:
+try:
+    while True:
 
-    # Get current positions of all trackbars
-    hMin = cv2.getTrackbarPos('HMin', 'image')
-    sMin = cv2.getTrackbarPos('SMin', 'image')
-    vMin = cv2.getTrackbarPos('VMin', 'image')
-    hMax = cv2.getTrackbarPos('HMax', 'image')
-    sMax = cv2.getTrackbarPos('SMax', 'image')
-    vMax = cv2.getTrackbarPos('VMax', 'image')
+        # Get current positions of all trackbars
+        hMin = cv2.getTrackbarPos('HMin', 'image')
+        sMin = cv2.getTrackbarPos('SMin', 'image')
+        vMin = cv2.getTrackbarPos('VMin', 'image')
+        hMax = cv2.getTrackbarPos('HMax', 'image')
+        sMax = cv2.getTrackbarPos('SMax', 'image')
+        vMax = cv2.getTrackbarPos('VMax', 'image')
 
-    # Set minimum and maximum HSV values to display
-    lower = np.array([hMin, sMin, vMin])
-    upper = np.array([hMax, sMax, vMax])
+        # Set minimum and maximum HSV values to display
+        lower = np.array([hMin, sMin, vMin])
+        upper = np.array([hMax, sMax, vMax])
 
-    # Convert to HSV format and color threshold
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lower, upper)
-    result = cv2.bitwise_and(image, image, mask=mask)
+        # Convert to HSV format and color threshold
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, lower, upper)
+        result = cv2.bitwise_and(image, image, mask=mask)
 
-    
-    cv2.imshow('image', result)
+        
+        cv2.imshow('image', result)
 
-    ret, frame = cap.read()
-    
-    if ret == True:
-        frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(frameHSV, lower, upper)
-        contornos,_ = cv2.findContours(
-            mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
-        #cv2.drawContours(frame, contornos, -1, (255, 0, 0), 3)
-        for c in contornos:
-            area = cv2.contourArea(c)
-            if area > 1000:
-                
-                M = cv2.moments(c)
-                if (M["m00"] == 0):
-                    M["m00"] = 1
-                x = int(M["m10"]/M["m00"])
-                y = int(M["m01"]/M["m00"])
-                cv2.circle(frame, (x,y), 7, (255,0,255), -1)
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                cv2.putText(frame, '{},{}'.format(x, y), (x+10, y), font, 0.75, (255,0,255), 1, cv2.LINE_AA)
-                nuevoContorno = cv2.convexHull(c)
-                cv2.circle(frame, (x,y), max(nuevoContorno[:, 0, 0].tolist()) - x, (0,0,255), 2)
-                
-                if mostrar_contorno:
-                    cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
-                print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
-        # cv2.imshow('maskAzul', mask)
-        # cv2.imshow('maskVerde', mask)
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) & 0xFF == ord('s'):
-            break
-cap.release()
-cv2.destroyAllWindows()
+        ret, frame = cap.read()
+        
+        if ret == True:
+            frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(frameHSV, lower, upper)
+            contornos,_ = cv2.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            #cv2.drawContours(frame, contornos, -1, (255, 0, 0), 3)
+            for c in contornos:
+                area = cv2.contourArea(c)
+                if area > 1000:
+                    
+                    M = cv2.moments(c)
+                    if (M["m00"] == 0):
+                        M["m00"] = 1
+                    x = int(M["m10"]/M["m00"])
+                    y = int(M["m01"]/M["m00"])
+                    cv2.circle(frame, (x,y), 7, (255,0,255), -1)
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    cv2.putText(frame, '{},{}'.format(x, y), (x+10, y), font, 0.75, (255,0,255), 1, cv2.LINE_AA)
+                    nuevoContorno = cv2.convexHull(c)
+                    cv2.circle(frame, (x,y), max(nuevoContorno[:, 0, 0].tolist()) - x, (0,0,255), 2)
+                    
+                    if mostrar_contorno:
+                        cv2.drawContours(frame, [nuevoContorno], 0, (0, 255, 0), 3)
+                    print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
+            # cv2.imshow('maskAzul', mask)
+            # cv2.imshow('maskVerde', mask)
+            cv2.imshow('frame', frame)
+            if cv2.waitKey(1) & 0xFF == ord('s'):
+                break
+except KeyboardInterrupt:
+    # Guardar los valores de lower y upper en un archivo de texto en caso de KeyboardInterrupt
+    with open('valores_lower_upper.txt', 'w') as file:
+        file.write(f'Lower: [{lower[0]},{lower[1]},{lower[2]}]\n')
+        file.write(f'Upper: [{upper[0]},{upper[1]},{upper[2]}]\n')
+
+finally:
+    cap.release()
+    cv2.destroyAllWindows()
