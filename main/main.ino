@@ -25,6 +25,8 @@
 
 #define redLed 51
 
+#define baud 9600
+
 int right_pwm_value;
 int right_dir_value;
 int left_pwm_value;
@@ -72,6 +74,8 @@ unsigned long ref_time = 0;
 unsigned long time_ant = 0;
 unsigned long newtime;
 unsigned long now;
+float distancePerStep = 0.0;
+float distanceTraveled = 0.0;
 const int Period = 10000; // 10 ms = 100Hz
 //const int Debounce = 500000; // 500ms
 //unsigned long pressed_time = 0;
@@ -81,7 +85,6 @@ volatile bool scoopFlag = false;
 // ************** Función para retroceder ***************
 void Atras(int pwm_ref)
 {
-    Serial.println("Atras");
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
@@ -96,7 +99,6 @@ void Atras(int pwm_ref)
 // ************** Función para parar ***************
 void Parar()
 {
-    Serial.println("Parar");
     // Detener motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, LOW);
@@ -111,7 +113,6 @@ void Parar()
 
 void Avanzar(int pwm_ref)
 {
-    Serial.println("Avanzar");
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
@@ -126,7 +127,6 @@ void Avanzar(int pwm_ref)
 // ************** Función para doblar a la derecha ***************
 void Doblar_derecha(int pwm_ref)
 {
-    Serial.println("Doblar Derecha");
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
@@ -141,7 +141,6 @@ void Doblar_derecha(int pwm_ref)
 // ************** Función para doblar a la izquierda ***************
 void Doblar_izquierda(int pwm_ref)
 {
-    Serial.println("Doblar Izquierda");
     // Avanzar motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
@@ -218,6 +217,7 @@ void scoop()
         servo.write(angle);
         delay(SCOOPDELAY);
     }
+    Serial.println("scoopedLol");
 }
 
 void readSerialPort() {
@@ -307,7 +307,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(BC1), doEncoderB1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(BC2), doEncoderB2, CHANGE); // encoder 0 PIN B
 
-    Serial.begin(115200);
+    Serial.begin(baud);
 }
 
 void loop() {
@@ -325,6 +325,22 @@ void loop() {
   if(auto_mode){
     if(msg[0] != '\0') {
       stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
+    }
+    if(right_pwm_value == -1){
+      float distancePerStep = (3.141592653589793 * d * ratio_ruedas) / steps; // Assuming PI = 3.141592653589793
+      avance = encoderAPos * distancePerStep;
+
+      checkDistance();
+
+      if (avance >= 30.0) {
+        checkDistance();
+        Parar();
+        encoderAPos = 0;
+        distanceTraveled = 0.0;
+      } else {
+        // Continue advancing
+        Avanzar(PWM);
+      }
     }
     if(left_dir_value == -1){
       digitalWrite(redLed, HIGH);

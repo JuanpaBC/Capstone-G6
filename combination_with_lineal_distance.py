@@ -110,7 +110,7 @@ class ColorTracker:
                         self.area = area
                         # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")}
                 if len(contornos) == 0:
-                    self.distancia = "0"
+                    self.distancia = -1
                 if self.show:
                     cv2.imshow('frame', frame)
                 #if cv2.waitKey(1) & 0xFF == ord('s'):
@@ -131,9 +131,10 @@ class Communication:
         self.starts = False
         self.target_W = "COM4"
         self.target_L = '/dev/ttyACM0'
+        self.baud = 9600
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_L, 115200, timeout=1)
+        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
@@ -143,8 +144,10 @@ class Communication:
         # Manda la distancia medida y espera respuesta del Arduino.
         print(f'Enviando mensaje {mensaje}')
         if self.arduino.isOpen():
+            self.arduino.flush()
             self.arduino.write(mensaje.encode('utf-8'))
             time.sleep(0.1)
+            self.arduino.flush()
         if False:  # self.manual_mode:
             # Wait for an acknowledgment response from Arduino
             time.sleep(5)
@@ -275,7 +278,7 @@ tracking_thread.daemon = True
 tracking_thread.start()
 
 running = True
-
+sendIt = True
 while running:
     if (coms.manual_mode):
         if keyboard.is_pressed('a'):
@@ -301,11 +304,17 @@ while running:
         ret, frame = tracker.cap.read()
         if ret:
             distancia = tracker.distancia
-            area = tracker.area
-            print(distancia,area)
-            control.make_control(distancia, area)
-            control_signal = control.get_control()
-            coms.comunicacion(control_signal)
+            if(distancia == -1):
+                if not (sendIt):
+                    coms.comunicacion('-1,1,-1,1\n')
+                    sendIt = True
+            else:    
+                sendIt = False
+                area = tracker.area
+                print(distancia,area)
+                control.make_control(distancia, area)
+                control_signal = control.get_control()
+                coms.comunicacion(control_signal)
         else:
             print("wtf")
     if keyboard.is_pressed('x'):
