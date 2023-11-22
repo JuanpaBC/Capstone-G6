@@ -305,6 +305,8 @@ while running:
             control.make_control(distancia, area)
             control_signal = control.get_control()
             coms.comunicacion(control_signal)
+        else:
+            print("wtf")
     if keyboard.is_pressed('x'):
         running = False
         print("Stopped")
