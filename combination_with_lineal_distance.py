@@ -232,7 +232,6 @@ class Pid:
             self.velocity = np.sign(self.velocity) * self.min_velocity
 
     def make_control(self, distancia, size):
-        print("dist", distancia, "size", size)
         angular_error = 0
         size_error = 0
         if abs(int(size)) > self.tol_size:
@@ -252,6 +251,7 @@ class Pid:
             # there is not objective
             self.motor_L = 0
             self.motor_R = 0
+        print("vel", self.velocity, "size", self.C)
 
     def get_control(self):
         right, left = self.get_control_value()
@@ -302,6 +302,7 @@ while running:
         if ret:
             distancia = tracker.distancia
             area = tracker.area
+            print(distancia,area)
             control.make_control(distancia, area)
             control_signal = control.get_control()
             coms.comunicacion(control_signal)
