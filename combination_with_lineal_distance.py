@@ -15,7 +15,7 @@ class ColorTracker:
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = True
+        self.show = False
 
     def nothing(self, x):
         pass
@@ -113,8 +113,8 @@ class ColorTracker:
                     self.distancia = "0"
                 if self.show:
                     cv2.imshow('frame', frame)
-                if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break
+                #if cv2.waitKey(1) & 0xFF == ord('s'):
+                #    break
 
     def stop_tracking(self):
         self.tracking = False
