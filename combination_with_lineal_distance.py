@@ -175,92 +175,86 @@ def track_wrapper(tracker):
 class Pid:
     def __init__(self):
         self.Ts = 0.2  # time sample
-        self.Kp = 0.0001
-        self.Kd = 0.00001
-        self.Ki = 0.000000001
-        self.tol = 50  # tolerancia a error
+        self.ref_ang = 0
+        self.Kp_ang = 0.0001
+        self.Kd_ang = 0.00001
+        self.Ki_ang = 0.000000001
+        self.tol_ang = 50  # tolerancia a error
+        
+        self.ref_lin = 0
+        self.Kp_lin = 0.5
+        self.Kd_lin = 0.01
+        self.Ki_lin = 0.001
+        self.tol_size = 50
+        
+        self.E_ang = 0
+        self.E_ang_ = 0
+        self.E_ang__ = 0
+        self.C_ang = 0
+        self.C_ang_ = 0
+        self.E_lin = 0
+        self.E_lin_ = 0
+        self.E_lin__ = 0
+        self.C_lin = 0
+        self.C_lin_ = 0
+        
         self.min_C = 180
         self.max_C = 255
-        self.C_lin = 200
-
-        self.ref = 0
-        self.E = 0
-        self.E_ = 0
-        self.E__ = 0
-        self.C = 0
-        self.C_ = 0
         self.motor_R = 0
         self.motor_L = 0
 
-
-        self.Kp_size = 0.5
-        self.Kd_size = 0.01
-        self.Ki_size = 0.001
-        self.tol_size = 50
-        self.min_velocity = 0
-        self.max_velocity = 150
-
-        self.E_size = 0
-        self.E_size_ = 0
-        self.E_size__ = 0
-        self.velocity = 0
-
-
-    def update(self, error, size):
-        self.E__ = self.E_
-        self.E_ = self.E
-        self.E = error
-        self.C_ = self.C
-        self.C = self.C_ + (self.Kp + self.Ts*self.Ki + self.Kd/self.Ts)*self.E + \
-            (-self.Kp - 2*self.Kd/self.Ts)*self.E_ + (self.Kd/self.Ts)*self.E__
-        if abs(self.C) > self.max_C:
-            self.C = np.sign(self.C) * self.max_C
-        if abs(self.C) < self.min_C:
-            self.C = np.sign(self.C) * self.min_C
-        self.C = np.sign(self.C) * int(self.C)
-
-        self.E_size__ = self.E_size_
-        self.E_size_ = self.E_size
-        self.E_size = size
-        self.velocity = (
-            self.velocity
-            + (self.Kp_size + self.Ts * self.Ki_size + self.Kd_size / self.Ts) * self.E_size
-            + (-self.Kp_size - 2 * self.Kd_size / self.Ts) * self.E_size_
-            + (self.Kd_size / self.Ts) * self.E_size__
-        )
+    def update_ang(self, error):
+        self.E_ang__ = self.E_ang_
+        self.E_ang_ = self.E_ang
+        self.E_ang = error
+        self.C_ang_ = self.C
+        self.C_ang = (self.C_ang_
+                      + (self.Kp_ang + self.Ts*self.Ki_ang + self.Kd_ang/self.Ts)*self.E_ang
+                      + (-self.Kp_ang - 2*self.Kd_ang/self.Ts)*self.E_ang_
+                      + (self.Kd_ang/self.Ts)*self.E_ang__)
+        
+    def update_lin(self, size):
+        self.E_ling__ = self.E_lin_
+        self.E_ling_ = self.E_lin
+        self.E_ling = size
+        self.C_lin = (self.C_lin_
+                      + (self.Kp_lin+ self.Ts * self.Ki_lin + self.Kd__lin / self.Ts) * self.E_lin
+                      + (-self.Kp_lin - 2 * self.Kd_lin/self.Ts) * self.E_lin_
+                      + (self.Kd_lin / self.Ts) * self.E_lin__)
         if abs(self.velocity) > self.max_velocity:#CHECK
             self.velocity = np.sign(self.velocity) * self.max_velocity
         if abs(self.velocity) < self.min_velocity:
             self.velocity = np.sign(self.velocity) * self.min_velocity
 
+    def update(self, error, size):
+        self.update_ang(error)
+        self.update_lin(size)
+
     def make_control(self, distancia, size):
-        angular_error = 0
-        size_error = 0
-        if abs(int(size)) > self.tol_size:
-            size_error = int(size)
-        if abs(int(distancia)) > self.tol:
-            angular_error = int(distancia)
-        self.update(angular_error, size_error)
-        if abs(angular_error) > self.tol:
-            if angular_error > 0:
-                print(self.C)
-                self.motor_L = self.C
-                self.motor_R = - self.C
-            else:
-                self.motor_L = - self.C
-                self.motor_R = self.C
-        if (distancia == "0"):
-            # there is not objective
+        if distancia == "0": # there is not objective
             self.motor_L = 0
             self.motor_R = 0
-        print("vel", self.velocity, "size", self.C)
+        else
+            distancia = int(distancia)
+            size = int(size)
+            ang_error = 0 if abs(distancia - self.ref_ang) < self.tol_ang else distancia
+            lin_error = 0 if abs(size - self.ref_lin) < self.tol_lin else size
+            self.update(ang_error, lin_error)
+            self.motor_L = self.check_limit(self.C_lin + self.C_ang)
+            self.motor_R = self.check_limit(self.C_lin - self.C_ang)
+        print("vel_lin", self.C_lin, "  vel_ang", self.C_ang, "  mR", self.motor_R, "  mL", self.motor_L)
+
+    def check_limit(self, vel):
+        if vel < self.min_C:
+            return self.min_C
+        if vel > self.max_C:
+            return self.max_C
+        return vel
 
     def get_control(self):
-        right, left = self.get_control_value()
+        right, left = [self.motor_R, self.motor_L]
         return str(int(min(abs(right), 250))) + "," + str(int(np.sign(right))) + "," + str(int(min(abs(left), 250))) + "," + str(int(np.sign(left)))
 
-    def get_control_value(self):
-        return [max(-30,self.velocity + self.motor_R), max(-30,self.velocity + self.motor_L)]
 
 tracker = ColorTracker()
 tracker.colorSetup()
