@@ -45,7 +45,8 @@ char automatic[] = "N";
 
 char msg[40];
 bool auto_mode = true;
-
+float scoop_debounce = 1000;
+float last_scoop = 0;
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
 int steps = 12;
@@ -223,7 +224,7 @@ void scoop()
 void readSerialPort() {
   memset(msg, 0, sizeof(msg));  // Clear the msg array
   if (Serial.available()) {
-    delay(10);
+    delay(20);
     int i = 0;
     while (Serial.available() > 0 && i < sizeof(msg) - 1) {
       msg[i++] = Serial.read();
@@ -268,8 +269,10 @@ void checkDistance() {
   unsigned long duration = pulseIn(echoPin, HIGH);
   float distance = duration * 0.034 / 2;
 
-  if (auto_mode && distance < 10) {
+  Serial.println(distance);
+  if (auto_mode && distance < 8) {
     scoop();
+    delay(scoop_debounce);
   }
 }
 
@@ -311,57 +314,38 @@ void setup() {
 }
 
 void loop() {
-
   readSerialPort();
-
-  if(msg == manual){
+  if (strcmp(msg, manual) == 0) {
     auto_mode = false;
   }
-  else if(msg == automatic){
+  else if (strcmp(msg, automatic) == 0) {
     auto_mode = true;
-    
   }
 
   if(auto_mode){
-    if(msg[0] != '\0') {
+    if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
       stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
-    }
-    if(right_pwm_value == -1){
-      float distancePerStep = (3.141592653589793 * d * ratio_ruedas) / steps; // Assuming PI = 3.141592653589793
-      avance = encoderAPos * distancePerStep;
-
-      checkDistance();
-
-      if (avance >= 30.0) {
-        checkDistance();
-        Parar();
-        encoderAPos = 0;
-        distanceTraveled = 0.0;
-      } else {
-        // Continue advancing
-        Avanzar(PWM);
+      if(left_dir_value == -1){
+        digitalWrite(redLed, HIGH);
+        digitalWrite(AIN1, LOW);
+        digitalWrite(AIN2, HIGH);
       }
-    }
-    if(left_dir_value == -1){
-      digitalWrite(redLed, HIGH);
-      digitalWrite(AIN1, LOW);
-      digitalWrite(AIN2, HIGH);
-    }
-    else {
-      digitalWrite(AIN1, HIGH);
-      digitalWrite(AIN2, LOW);
-    }
-    analogWrite(ENA, left_pwm_value);
+      else {
+        digitalWrite(AIN1, HIGH);
+        digitalWrite(AIN2, LOW);
+      }
+      analogWrite(ENA, left_pwm_value);
 
-    if(right_dir_value == 1){
-      digitalWrite(BIN1, LOW);
-      digitalWrite(BIN2, HIGH);
+      if(right_dir_value == 1){
+        digitalWrite(BIN1, LOW);
+        digitalWrite(BIN2, HIGH);
+      }
+      else {
+        digitalWrite(BIN1, HIGH);
+        digitalWrite(BIN2, LOW);
+      }
+      analogWrite(ENB, right_pwm_value);
     }
-    else {
-      digitalWrite(BIN1, HIGH);
-      digitalWrite(BIN2, LOW);
-    }
-    analogWrite(ENB, right_pwm_value);
   }
   else {
     digitalWrite(redLed, LOW);
@@ -385,5 +369,5 @@ void loop() {
       Parar();
     }
   }
-  strcpy(msg, "");
+  msg[0] = '\0';
 }

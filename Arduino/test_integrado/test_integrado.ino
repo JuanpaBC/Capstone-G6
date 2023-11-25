@@ -1,20 +1,21 @@
-/*
-  TB6612FNG-Dual-Driver
-  made on 28 oct 2020
-  by Amir Mohammad Shojaee @ Electropeak
-  Home
-
-*/
 #include <Servo.h> //Imports the library Servo
 
-#define ENA 9 // D6
-#define ENB 6
+#define trigPin 3 // TriggerSensor
+#define echoPin 2 // EchoSensor
 
-#define AIN1 11 // D1
-#define AIN2 10  // D0
+#define ServoPin 8 // Servo pin
+#define MAXANG 180 // Servo máx angle
+#define MINANG 0 // Servo min angle
+#define SCOOPDELAY 15
 
-#define BIN1 5
-#define BIN2 4
+#define ENA 6 // D6
+#define ENB 11
+
+#define AIN1 4 // D1
+#define AIN2 5  // D0
+
+#define BIN1 10
+#define BIN2 9
 
 #define AC1 21 // D4
 #define AC2 20 // D3
@@ -22,13 +23,9 @@
 #define BC1 19
 #define BC2 18
 
-#define IRLed 7
-
 #define redLed 51
 
-#define servoPin 8
-
-#define IRsensor
+#define baud 9600
 
 Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
@@ -66,7 +63,7 @@ const int Period = 10000; // 10 ms = 100Hz
 //unsigned long pressed_time = 0;
 
 // ************** Función para avanzar ***************
-void Atras(int pwm_ref)
+void Avanzar(int pwm_ref)
 {
     Serial.println("Adelante");
     // Avanzar motor A
@@ -96,7 +93,7 @@ void Parar()
 }
 // ************** Función para ir hacia atras ***************
 
-void Avanzar(int pwm_ref)
+void Atras(int pwm_ref)
 {
     Serial.println("Atras");
     // Retroceder motor A
@@ -209,7 +206,7 @@ void setup()
 
     pinMode(redLed, OUTPUT);
 
-    servo.attach(servoPin); // States that the servo is attached to pin 5
+    servo.attach(ServoPin); // States that the servo is attached to pin 5
     servo.write(angle);
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
@@ -218,7 +215,7 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(BC1), doEncoderB1, CHANGE); // encoder 0 PIN A
     attachInterrupt(digitalPinToInterrupt(BC2), doEncoderB2, CHANGE); // encoder 0 PIN B
 
-    Serial.begin(115200);
+    Serial.begin(baud);
 }
 int donothing(){
   int i = 0;

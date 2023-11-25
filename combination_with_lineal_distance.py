@@ -15,7 +15,7 @@ class ColorTracker:
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = False
+        self.show = True
 
     def nothing(self, x):
         pass
@@ -25,7 +25,7 @@ class ColorTracker:
             # Load image
             self.image = cv2.imread('hsv_color_map.png')
 
-            # Create a window
+            # Create a windows
             cv2.namedWindow('image')
 
             # Create trackbars for color change
@@ -147,7 +147,6 @@ class Communication:
             self.arduino.flush()
             self.arduino.write(mensaje.encode('utf-8'))
             time.sleep(0.1)
-            self.arduino.flush()
         if False:  # self.manual_mode:
             # Wait for an acknowledgment response from Arduino
             time.sleep(5)
@@ -229,7 +228,7 @@ class Pid:
             + (-self.Kp_size - 2 * self.Kd_size / self.Ts) * self.E_size_
             + (self.Kd_size / self.Ts) * self.E_size__
         )
-        if abs(self.velocity) > self.max_velocity:
+        if abs(self.velocity) > self.max_velocity:#CHECK
             self.velocity = np.sign(self.velocity) * self.max_velocity
         if abs(self.velocity) < self.min_velocity:
             self.velocity = np.sign(self.velocity) * self.min_velocity
@@ -261,7 +260,7 @@ class Pid:
         return str(int(min(abs(right), 250))) + "," + str(int(np.sign(right))) + "," + str(int(min(abs(left), 250))) + "," + str(int(np.sign(left)))
 
     def get_control_value(self):
-        return [self.velocity + self.motor_R, self.velocity + self.motor_L]
+        return [max(-30,self.velocity + self.motor_R), max(-30,self.velocity + self.motor_L)]
 
 tracker = ColorTracker()
 tracker.colorSetup()
@@ -281,7 +280,23 @@ running = True
 sendIt = True
 while running:
     if (coms.manual_mode):
-        if keyboard.is_pressed('a'):
+        command = input()
+        if command == 'a':
+            coms.comunicacion('200,1,200,-1\n')
+        elif command == 'd':
+            # coms.comunicacion('R\n')
+            coms.comunicacion('200,-1,200,1\n')
+        elif command == 'w':
+            # coms.comunicacion('U\n')
+            coms.comunicacion('200,1,200,1\n')
+        elif command == 's':
+            # coms.comunicacion('D\n')
+            coms.comunicacion('200,-1,200,-1\n')
+        elif command == 'p':
+            coms.comunicacion('S\n')
+        elif command == 'q':
+            coms.comunicacion('0,1,0,1\n')
+        """if keyboard.is_pressed('a'):
             # coms.comunicacion('L\n')
             coms.comunicacion('200,1,200,-1\n')
         elif keyboard.is_pressed('d'):
@@ -300,6 +315,7 @@ while running:
         elif keyboard.is_pressed('m'):
             coms.switch_mode()
             tracker.show = True
+            """
     else:
         ret, frame = tracker.cap.read()
         if ret:
@@ -320,6 +336,7 @@ while running:
     if keyboard.is_pressed('x'):
         running = False
         print("Stopped")
+        coms.comunicacion('0,1,0,1\n')
 
 tracker.stop_tracking()
 tracker.finish()

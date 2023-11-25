@@ -1,25 +1,33 @@
+#include <Servo.h> //Imports the library Servo
+
+#define trigPin 3 // TriggerSensor
+#define echoPin 2 // EchoSensor
+
+#define ServoPin 8 // Servo pin
+#define MAXANG 180 // Servo máx angle
+#define MINANG 0 // Servo min angle
+#define SCOOPDELAY 15
+
+#define ENA 6 // D6
+#define ENB 11
+
+#define AIN1 4 // D1
+#define AIN2 5  // D0
+
+#define BIN1 10
+#define BIN2 9
+
+#define AC1 21 // D4
+#define AC2 20 // D3
+
+#define BC1 19
+#define BC2 18
+
+#define redLed 51
+
+#define baud 9600
 
 
-#define ENA 9 // D6
-#define ENB 6
-
-//#define STBY 8  // D2
-#define AIN1 11 // D1
-#define AIN2 10  // D0
-
-#define BIN1 4
-#define BIN2 5
-
-#define AC1 23 // D4
-#define AC2 22 // D3
-
-#define BC1 13
-#define BC2 12
-
-#define switchPin 1
-
-// GPIO comunication with raspberry
-#define interruptPin 2
 
 int d = 23; // mm of wheel
 int ratio_ruedas = 10;
@@ -77,16 +85,7 @@ void setup()
     pinMode(BC2, INPUT_PULLUP);
     digitalWrite(BC2, HIGH);
 
-    pinMode(switchPin, INPUT_PULLUP);
-
-    attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
-    attachInterrupt(digitalPinToInterrupt(AC2), doEncoderA2, CHANGE); // encoder 0 PIN B
-
-    attachInterrupt(digitalPinToInterrupt(BC1), doEncoderB1, CHANGE); // encoder 0 PIN A
-    attachInterrupt(digitalPinToInterrupt(BC2), doEncoderB2, CHANGE); // encoder 0 PIN B
-
-    attachInterrupt(digitalPinToInterrupt(interruptPin), readGPIO, RISING);
-    Serial.begin(115200);
+    Serial.begin(baud);
 }
 
 void loop()
