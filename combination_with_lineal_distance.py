@@ -207,7 +207,7 @@ class Pid:
         self.E_ang__ = self.E_ang_
         self.E_ang_ = self.E_ang
         self.E_ang = error
-        self.C_ang_ = self.C
+        self.C_ang_ = self.C_ang
         self.C_ang = (self.C_ang_
                       + (self.Kp_ang + self.Ts*self.Ki_ang + self.Kd_ang/self.Ts)*self.E_ang
                       + (-self.Kp_ang - 2*self.Kd_ang/self.Ts)*self.E_ang_
@@ -217,6 +217,7 @@ class Pid:
         self.E_ling__ = self.E_lin_
         self.E_ling_ = self.E_lin
         self.E_ling = size
+        self.C_lin_ = self.C_lin
         self.C_lin = (self.C_lin_
                       + (self.Kp_lin+ self.Ts * self.Ki_lin + self.Kd__lin / self.Ts) * self.E_lin
                       + (-self.Kp_lin - 2 * self.Kd_lin/self.Ts) * self.E_lin_

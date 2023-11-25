@@ -47,34 +47,32 @@ char msg[40];
 bool auto_mode = true;
 float scoop_debounce = 1000;
 float last_scoop = 0;
-int d = 23; // mm of wheel
+int d = 32.5; // mm of wheel
 int ratio_ruedas = 10;
 int steps = 12;
 int state = 8;
 int delay_time = 2000;
-float vueltas_ruedasA;
-float vueltas_ruedasB;
 float avance;
 int enable = 0;
 bool pressed = true;
 int PWM = 250;
+
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
-
-long newpositionA;
-long oldpositionA = 0;
+long encoderAPos_ = 0;
+long encoderBPos_ = 0
 float velA; // Velocidad del motor 0 en RPM
-
-long newpositionB;
-long oldpositionB = 0;
 float velB; // Velocidad del motor 0 en RPM
+
 int countdown = 5;
 int printedCountdown = -1;
 
-unsigned long ref_time = 0;
-unsigned long time_ant = 0;
-unsigned long newtime;
-unsigned long now;
+
+unsigned long init_time = 0;
+unsigned long time = 0;
+unsigned long time_ = 0;
+unsigned long delta_time = 0;
+
 float distancePerStep = 0.0;
 float distanceTraveled = 0.0;
 const int Period = 10000; // 10 ms = 100Hz
@@ -82,6 +80,27 @@ const int Period = 10000; // 10 ms = 100Hz
 //unsigned long pressed_time = 0;
 
 volatile bool scoopFlag = false; 
+
+
+float velA; // [RPM]
+float velB; // [RPM]
+float error_velA;
+float error_velB;
+float error_velA_;
+float error_velB_;
+float error_velA__;
+float error_velB__;
+float PWM_A;
+float PWM_B;
+float PWM_A_;
+float PWM_B_;
+
+float Kp_L = 1;
+float Ki_L = 0.1;
+float Kd_L = 0.00001;
+float Kp_R = 1;
+float Ki_R = 0.1;
+float Kd_R = 0.00001;
 
 // ************** Función para retroceder ***************
 void Atras(int pwm_ref)
@@ -110,8 +129,8 @@ void Parar()
     digitalWrite(BIN2, LOW);
     analogWrite(ENB, 0);
 }
-// ************** Función para ir hacia avanzar ***************
 
+// ************** Función para ir hacia avanzar ***************
 void Avanzar(int pwm_ref)
 {
     // Retroceder motor A
@@ -221,7 +240,8 @@ void scoop()
     Serial.println("scoopedLol");
 }
 
-void readSerialPort() {
+void readSerialPort()
+{
   memset(msg, 0, sizeof(msg));  // Clear the msg array
   if (Serial.available()) {
     delay(20);
@@ -233,9 +253,9 @@ void readSerialPort() {
   }
 }
 
-void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir) {
+void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir)
+{
   char *token = strtok(msg, ",");
-
   for (int i = 0; i < 4; i++) {
     int intValue = atoi(token);
     switch (i) {
@@ -257,9 +277,8 @@ void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, in
 }
 
 
-void checkDistance() {
-
-
+void checkDistance()
+{
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -274,6 +293,28 @@ void checkDistance() {
     scoop();
     delay(scoop_debounce);
   }
+}
+
+void PID_R(float ref, float *error, float *error_, float *error__, float *pwm, float *pwm_, float Ts)
+{
+  *error__ = error_
+  *error_ = error
+  *pwm_ = pwm
+  *pwm = (pwm_ 
+         + (Kp_R+ Ts *Ki_R +Kd_R / Ts) * error
+         + (-Kp_R- 2 * Kd_R/Ts) * error_
+         + (Kd_R / Ts) * error__)
+}
+
+void PID_L(float ref, float *error, float *error_, float *error__, float *pwm, float *pwm_, float Ts)
+{
+  *error__ = error_
+  *error_ = error
+  *pwm_ = pwm
+  *pwm = (pwm_ 
+         + (Kp_L+ Ts*Ki_L + Kd_L/Ts) * error
+         + (-Kp_L- 2*Kd_L/Ts) * error_
+         + (Kd_L / Ts) * error__)
 }
 
 void setup() {
@@ -311,9 +352,13 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(BC2), doEncoderB2, CHANGE); // encoder 0 PIN B
 
     Serial.begin(baud);
+    init_time = millis();
 }
 
+
 void loop() {
+  time = millis()
+
   readSerialPort();
   if (strcmp(msg, manual) == 0) {
     auto_mode = false;
@@ -322,7 +367,7 @@ void loop() {
     auto_mode = true;
   }
 
-  if(auto_mode){
+  if(auto_mode)  {
     if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
       stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
       if(left_dir_value == -1){
@@ -336,6 +381,11 @@ void loop() {
       }
       analogWrite(ENA, left_pwm_value);
 
+      //*PID con RPM
+      //error_velA = left_pwm_value - velA;
+      //PID_L(left_pwm_value, &error_velA, &error_velA_, &error_velA__, &PWM_A, &PWM_A_, Ts);
+      //analogWrite(ENA, PWM_A);
+
       if(right_dir_value == 1){
         digitalWrite(BIN1, LOW);
         digitalWrite(BIN2, HIGH);
@@ -345,8 +395,14 @@ void loop() {
         digitalWrite(BIN2, LOW);
       }
       analogWrite(ENB, right_pwm_value);
+
+      //*PID con RPM
+      //error_velB = right_pwm_value - velB;
+      //PID_R(right_pwm_value, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_, Ts);
+      //analogWrite(ENA, PWM_B);
     }
   }
+
   else {
     digitalWrite(redLed, LOW);
     if(msg == forward){
@@ -370,4 +426,14 @@ void loop() {
     }
   }
   msg[0] = '\0';
+
+  time_ = time;
+  time  = millis();
+  delta_time = time - time_;
+  velA = ((encoderAPos - encoderAPos_) / 360.0) * (60000.0 / delta_time);
+  velB = ((encoderBPos - encoderBPos_) / 360.0) * (60000.0 / delta_time);
+  encoderAPos_ = encoderAPos;
+  encoderBPos_ = encoderBPos;
+  
+
 }
