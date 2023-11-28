@@ -32,31 +32,13 @@
 Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
 
-// Python commands
-char left[] = "L";
-char right[] = "R";
-char forward[] = "U";
-char backwards[] = "D";
-char scoopeSignal[] = "S";
-char manual[] = "M";
-char automatic[] = "N";
 
 char msg[40];
-bool auto_mode = true;
 float scoop_debounce = 1000;
 float last_scoop = 0;
 int d = 32.5; // mm of wheel
 int ratio_ruedas = 10;
 int steps = 12;
-int state = 8;
-int delay_time = 0.002;
-float avance;
-int enable = 0;
-bool pressed = true;
-int PWM = 250;
-
-int countdown = 5;
-int printedCountdown = -1;
 
 unsigned long init_time = 0;
 unsigned long time = 0;
@@ -144,75 +126,6 @@ void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
   Serial.println(*velB);
 }
 
-// ************** Función para retroceder ***************
-void Atras(int pwm_ref)
-{
-    // Avanzar motor A
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
-}
-
-// ************** Función para parar ***************
-void Parar()
-{
-    // Detener motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, 0);
-
-    // Detener motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, 0);
-}
-
-// ************** Función para ir hacia avanzar ***************
-void Avanzar(int pwm_ref)
-{
-    // Retroceder motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
-
-    // Retroceder motor B
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
-}
-
-// ************** Función para doblar a la derecha ***************
-void Doblar_derecha(int pwm_ref)
-{
-    // Avanzar motor A
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
-}
-
-// ************** Función para doblar a la izquierda ***************
-void Doblar_izquierda(int pwm_ref)
-{
-    // Avanzar motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
-}
 
 void doEncoderA1()
 {
@@ -331,7 +244,7 @@ void checkDistance()
   float distance = duration * 0.034 / 2;
 
   Serial.println(distance);
-  if (auto_mode && distance < 8) {
+  if (distance < 8) {
     scoop();
     delay(scoop_debounce);
   }
@@ -385,14 +298,6 @@ void loop() {
   time = millis();
 
   readSerialPort();
-  if (strcmp(msg, manual) == 0) {
-    auto_mode = false;
-  }
-  else if (strcmp(msg, automatic) == 0) {
-    auto_mode = true;
-  }
-
-  if(auto_mode)  {
     if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
       stringSplitter(msg, &right_rpm_value, &right_dir_value, &left_rpm_value, &left_dir_value);
       
@@ -415,32 +320,5 @@ void loop() {
         digitalWrite(BIN2, LOW);
       }
     }
-  }
-
-  else {
-    digitalWrite(redLed, LOW);
-    if(msg == forward){
-      checkDistance();
-      Avanzar(PWM);
-    }
-    else if(msg == backwards){
-      Atras(PWM);
-    }
-    else if(msg == left){
-      Doblar_izquierda(PWM);
-    }
-    else if(msg == right){
-      Doblar_derecha(PWM);
-    }
-    else if(msg == scoopeSignal){
-      scoop();
-    }
-    else if(msg[0] == '\0') {
-      Parar();
-    }
-  }
   msg[0] = '\0';
-
-  
-
 }
