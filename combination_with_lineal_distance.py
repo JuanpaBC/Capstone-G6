@@ -175,18 +175,27 @@ def track_wrapper(tracker):
 class Pid:
     def __init__(self):
         self.Ts = 0.2  # time sample
+        
+        self.init_pid_vars()
+        self.init_pid_params()
+        self.max_vel = 250
+        self.min_vel = 100
+        self.motor_R = 0
+        self.motor_L = 0
+
+    def init_pid_params(self):
         self.ref_ang = 0
         self.Kp_ang = 0.0001
         self.Kd_ang = 0.00001
         self.Ki_ang = 0.000000001
         self.tol_ang = 50  # tolerancia a error
-        
         self.ref_lin = 0
         self.Kp_lin = 0.5
         self.Kd_lin = 0.01
         self.Ki_lin = 0.001
         self.tol_size = 50
-        
+
+    def init_pid_vars(self):
         self.E_ang = 0
         self.E_ang_ = 0
         self.E_ang__ = 0
@@ -197,15 +206,6 @@ class Pid:
         self.E_lin__ = 0
         self.C_lin = 0
         self.C_lin_ = 0
-        
-        self.min_C = 180
-        self.max_C = 255
-        self.max_velocity = 100
-        self.min_velocity = 0
-        self.motor_R = 0
-        self.motor_L = 0
-
-        self.velocity = 0
 
     def update_ang(self, error):
         self.E_ang__ = self.E_ang_
@@ -226,10 +226,6 @@ class Pid:
                       + (self.Kp_lin+ self.Ts * self.Ki_lin + self.Kd_lin / self.Ts) * self.E_lin
                       + (-self.Kp_lin - 2 * self.Kd_lin/self.Ts) * self.E_lin_
                       + (self.Kd_lin / self.Ts) * self.E_lin__)
-        if abs(self.velocity) > self.max_velocity:#CHECK
-            self.velocity = np.sign(self.velocity) * self.max_velocity
-        if abs(self.velocity) < self.min_velocity:
-            self.velocity = np.sign(self.velocity) * self.min_velocity
 
     def update(self, error, size):
         self.update_ang(error)
@@ -250,10 +246,10 @@ class Pid:
         print("vel_lin", self.C_lin, "  vel_ang", self.C_ang, "  mR", self.motor_R, "  mL", self.motor_L)
 
     def check_limit(self, vel):
-        if vel < self.min_C:
-            return self.min_C
-        if vel > self.max_C:
-            return self.max_C
+        if abs(vel) < self.min_vel:
+            return np.sign(vel) * self.min_vel
+        if abs(vel) > self.max_vel:
+            return np.sign(vel) * self.max_vel
         return vel
 
     def get_control(self):
