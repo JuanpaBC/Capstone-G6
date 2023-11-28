@@ -69,7 +69,7 @@ int printedCountdown = -1;
 unsigned long init_time = 0;
 unsigned long time = 0;
 unsigned long time_ = 0;
-unsigned long delta_time = 0.0002;
+float delta_time = 0.02;
 
 float distancePerStep = 0.0;
 float distanceTraveled = 0.0;
@@ -80,7 +80,7 @@ const int Period = 10000; // 10 ms = 100Hz
 volatile bool scoopFlag = false; 
 
 
-float velA; // [RPM]
+float velA = 0.0; // [RPM]
 float velB; // [RPM]
 float error_velA;
 float error_velB;
@@ -293,27 +293,6 @@ void checkDistance()
   }
 }
 
-void PID_R(float ref, float *error, float *error_, float *error__, float *rpm, float *rpm_, float Ts)
-{
-  *error__ = *error_;
-  *error_ = *error;
-  *rpm_ = *rpm;
-  *rpm = (*rpm_ 
-         + (Kp_R+ Ts *Ki_R +Kd_R / Ts) * (*error)
-         + (-Kp_R- 2 * Kd_R/Ts) * (*error_)
-         + (Kd_R / Ts) * (*error__));
-}
-
-void PID_L(float ref, float *error, float *error_, float *error__, float *rpm, float *rpm_, float Ts)
-{
-  *error__ = *error_;
-  *error_ = *error;
-  *rpm_ = *rpm;
-  *rpm = (*rpm_ 
-         + (Kp_L+ Ts*Ki_L + Kd_L/Ts) * (*error)
-         + (-Kp_L- 2*Kd_L/Ts) * (*error_)
-         + (Kd_L / Ts) * (*error__));
-}
 
 void setup() {
     digitalWrite(redLed, LOW);
@@ -381,17 +360,24 @@ void loop() {
 
       //*PID con RPM
       left_rpm_value = 100;
+
+      velA = float(encoderAPos - encoderAPos_)/ delta_time / 60.0;
+      error_velA__ = error_velA_;
+      error_velA_ = error_velA;
       error_velA = left_rpm_value - velA;
-      PID_L(left_rpm_value, &error_velA, &error_velA_, &error_velA__, &PWM_A, &PWM_A_, 0.002);
+      PWM_A_ = PWM_A;
+      PWM_A = (PWM_A_ 
+               + (Kp_L + delta_time*Ki_L + Kd_L/delta_time) * (error_velA)
+               + (-Kp_L - 2*Kd_L/delta_time) * (error_velA_)
+               + (Kd_L/delta_time) * (error_velA__));
       analogWrite(ENA, PWM_A);
 
 
-      //Mandar valores al serial
 
-      Serial.print(PWM_A);
-      Serial.print(",");
-      Serial.println(PWM_B);
-      Serial.print("/n");
+      Serial.print("velA: ");
+      Serial.println(velA);
+
+
 
       
       if(right_dir_value == 1){
@@ -406,9 +392,19 @@ void loop() {
 
       //*PID con RPM
       right_rpm_value = 100;
+      velB = float(encoderBPos - encoderBPos_)/ delta_time / 60.0;
+      error_velB__ = error_velB_;
+      error_velB_ = error_velB;
       error_velB = right_rpm_value - velB;
-      PID_R(right_rpm_value, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_, 0.002);
+      PWM_B_ = PWM_B;
+      PWM_B = (PWM_B_ 
+               + (Kp_R + delta_time*Ki_R + Kd_R/delta_time) * (error_velB)
+               + (-Kp_R - 2*Kd_R/delta_time) * (error_velB_)
+               + (Kd_R/delta_time) * (error_velB__));
       analogWrite(ENA, PWM_B);
+
+      Serial.print("velB: ");
+      Serial.println(velB);
     }
   }
 
@@ -438,11 +434,10 @@ void loop() {
 
   time_ = time;
   time  = millis();
-  delta_time = (time - time_)/1000;
+  //delta_time = float(time_ - time);
+  delta_time = 0.2;
   encoderAPos_ = encoderAPos;
   encoderBPos_ = encoderBPos;
-  velA = ((encoderAPos - encoderAPos_) / 360.0) * (60000.0 / delta_time);
-  velB = ((encoderBPos - encoderBPos_) / 360.0) * (60000.0 / delta_time);
   
 
 }
