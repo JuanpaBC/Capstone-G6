@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import serial
 import time
-import keyboard
+#import keyboard
 import threading
 
 
@@ -113,6 +113,7 @@ class ColorTracker:
                     self.distancia = -1
                 if self.show:
                     cv2.imshow('frame', frame)
+                    cv2.waitKey(1)
                 #if cv2.waitKey(1) & 0xFF == ord('s'):
                 #    break
 
@@ -130,7 +131,7 @@ class Communication:
         self.manual_mode = False
         self.starts = False
         self.target_W = "COM4"
-        self.target_L = '/dev/ttyACM0'
+        self.target_L = '/dev/ttyACM1'
         self.baud = 9600
 
     def begin(self):
@@ -139,6 +140,13 @@ class Communication:
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
+    
+    def read_and_print_messages(self):
+        while True:
+            if self.arduino.isOpen():
+                message = self.arduino.readline().decode('utf-8').strip()
+                if message:
+                    print(f'Received message from Arduino: {message}')
 
     def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
@@ -271,6 +279,11 @@ tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
 tracking_thread.daemon = True
 tracking_thread.start()
 
+# Start a separate thread to read and print messages from Arduino
+read_messages_thread = threading.Thread(target=coms.read_and_print_messages)
+read_messages_thread.daemon = True
+read_messages_thread.start()
+
 running = True
 sendIt = True
 while running:
@@ -328,10 +341,10 @@ while running:
                 coms.comunicacion(control_signal)
         else:
             print("wtf")
-    if keyboard.is_pressed('x'):
-        running = False
-        print("Stopped")
-        coms.comunicacion('0,1,0,1\n')
+    #if keyboard.is_pressed('x'):
+    #    running = False
+    #    print("Stopped")
+    #    coms.comunicacion('0,1,0,1\n')
 
 tracker.stop_tracking()
 tracker.finish()
