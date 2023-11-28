@@ -4,9 +4,7 @@ from torchvision import transforms
 from ultralytics import YOLO
 model_file_name = "best.pt"
 # Load the pre-trained model
-model = YOLO()
-model = model.load(model_file_name)
-
+model = YOLO(model_file_name)
 # Set up the camera
 cap = cv2.VideoCapture(0)  # 0 corresponds to the default camera
 
@@ -14,7 +12,6 @@ cap = cv2.VideoCapture(0)  # 0 corresponds to the default camera
 transform = transforms.Compose([
     transforms.ToTensor(),
 ])
-
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -26,27 +23,17 @@ while True:
     with torch.no_grad():
         predictions = model(input_tensor)
     
-    for a in predictions:
-        c = a.boxes
-        print(c)
-        area = cv2.contourArea(c)
-        if area > 300:
-            M = cv2.moments(c)
-            if M["m00"] == 0:
-                M["m00"] = 1
-            x = int(M["m10"] / M["m00"])
-            y = int(M["m01"] / M["m00"])
-            cv2.circle(frame, (x, y), 7, (255, 0, 255), -1)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame, '{},{}'.format(
-                x, y), (x+10, y), font, 0.75, (255, 0, 255), 1, cv2.LINE_AA)
-            nuevoContorno = cv2.convexHull(c)
-            cv2.circle(frame, (x, y), max(
-                nuevoContorno[:, 0, 0].tolist()) - x, (0, 0, 255), 2)
-            cv2.drawContours(
-                frame, [nuevoContorno], 0, (0, 255, 0), 3)
-
-    # Display the resulting frame
+    for result in predictions:
+        result_bbox = result.boxes.xyxy
+        result_names = result.names
+        result_prob = result.probs
+        for result, name in zip(result_bbox, result_names):
+            print(result)
+            box = result[:4].int().tolist()
+            frame = cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+            label = f"{name}"
+            frame = cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    # Display the resulting frame with predictions
     cv2.imshow('Object Detection', frame)
 
     # Break the loop if 'q' key is pressed
