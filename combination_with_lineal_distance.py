@@ -249,6 +249,7 @@ class Pid:
             ang_error = 0 if abs(distancia - self.ref_ang) < self.tol_ang else distancia
             lin_error = 0 if abs(size - self.ref_lin) < self.tol_size else size
             self.update(ang_error, lin_error)
+            self.C_lin = 0
             self.motor_L = self.check_limit(self.C_lin + self.C_ang)
             self.motor_R = self.check_limit(self.C_lin - self.C_ang)
         print("vel_lin", self.C_lin, "  vel_ang", self.C_ang, "  mR", self.motor_R, "  mL", self.motor_L)

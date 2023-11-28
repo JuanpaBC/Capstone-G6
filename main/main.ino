@@ -347,6 +347,7 @@ void loop() {
   if(auto_mode)  {
     if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
       stringSplitter(msg, &right_rpm_value, &right_dir_value, &left_rpm_value, &left_dir_value);
+      
       if(left_dir_value == -1){
         digitalWrite(redLed, HIGH);
         digitalWrite(AIN1, LOW);
@@ -359,8 +360,6 @@ void loop() {
       //analogWrite(ENA, left_rpm_value);
 
       //*PID con RPM
-      left_rpm_value = 100;
-
       velA = float(encoderAPos - encoderAPos_)/ delta_time / 60.0;
       error_velA__ = error_velA_;
       error_velA_ = error_velA;
@@ -391,7 +390,6 @@ void loop() {
       //analogWrite(ENB, right_rpm_value);
 
       //*PID con RPM
-      right_rpm_value = 100;
       velB = float(encoderBPos - encoderBPos_)/ delta_time / 60.0;
       error_velB__ = error_velB_;
       error_velB_ = error_velB;
@@ -401,7 +399,7 @@ void loop() {
                + (Kp_R + delta_time*Ki_R + Kd_R/delta_time) * (error_velB)
                + (-Kp_R - 2*Kd_R/delta_time) * (error_velB_)
                + (Kd_R/delta_time) * (error_velB__));
-      analogWrite(ENA, PWM_B);
+      analogWrite(ENB, PWM_B);
 
       Serial.print("velB: ");
       Serial.println(velB);
