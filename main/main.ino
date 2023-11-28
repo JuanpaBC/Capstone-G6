@@ -27,9 +27,9 @@
 
 #define baud 9600
 
-int right_pwm_value;
+int right_rpm_value;
 int right_dir_value;
-int left_pwm_value;
+int left_rpm_value;
 int left_dir_value;
 Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
@@ -60,9 +60,7 @@ int PWM = 250;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
 long encoderAPos_ = 0;
-long encoderBPos_ = 0
-float velA; // Velocidad del motor 0 en RPM
-float velB; // Velocidad del motor 0 en RPM
+long encoderBPos_ = 0;
 
 int countdown = 5;
 int printedCountdown = -1;
@@ -253,20 +251,20 @@ void readSerialPort()
   }
 }
 
-void stringSplitter(char *msg, int *right_pwm, int *right_dir, int *left_pwm, int *left_dir)
+void stringSplitter(char *msg, int *right_rpm, int *right_dir, int *left_rpm, int *left_dir)
 {
   char *token = strtok(msg, ",");
   for (int i = 0; i < 4; i++) {
     int intValue = atoi(token);
     switch (i) {
       case 0:
-        *right_pwm = intValue;
+        *right_rpm = intValue;
         break;
       case 1:
         *right_dir = intValue;
         break;
       case 2:
-        *left_pwm = intValue;
+        *left_rpm = intValue;
         break;
       case 3:
         *left_dir = intValue;
@@ -295,26 +293,26 @@ void checkDistance()
   }
 }
 
-void PID_R(float ref, float *error, float *error_, float *error__, float *pwm, float *pwm_, float Ts)
+void PID_R(float ref, float *error, float *error_, float *error__, float *rpm, float *rpm_, float Ts)
 {
-  *error__ = error_
-  *error_ = error
-  *pwm_ = pwm
-  *pwm = (pwm_ 
-         + (Kp_R+ Ts *Ki_R +Kd_R / Ts) * error
-         + (-Kp_R- 2 * Kd_R/Ts) * error_
-         + (Kd_R / Ts) * error__)
+  *error__ = *error_;
+  *error_ = *error;
+  *rpm_ = *rpm;
+  *rpm = (*rpm_ 
+         + (Kp_R+ Ts *Ki_R +Kd_R / Ts) * (*error)
+         + (-Kp_R- 2 * Kd_R/Ts) * (*error_)
+         + (Kd_R / Ts) * (*error__));
 }
 
-void PID_L(float ref, float *error, float *error_, float *error__, float *pwm, float *pwm_, float Ts)
+void PID_L(float ref, float *error, float *error_, float *error__, float *rpm, float *rpm_, float Ts)
 {
-  *error__ = error_
-  *error_ = error
-  *pwm_ = pwm
-  *pwm = (pwm_ 
-         + (Kp_L+ Ts*Ki_L + Kd_L/Ts) * error
-         + (-Kp_L- 2*Kd_L/Ts) * error_
-         + (Kd_L / Ts) * error__)
+  *error__ = *error_;
+  *error_ = *error;
+  *rpm_ = *rpm;
+  *rpm = (*rpm_ 
+         + (Kp_L+ Ts*Ki_L + Kd_L/Ts) * (*error)
+         + (-Kp_L- 2*Kd_L/Ts) * (*error_)
+         + (Kd_L / Ts) * (*error__));
 }
 
 void setup() {
@@ -357,7 +355,7 @@ void setup() {
 
 
 void loop() {
-  time = millis()
+  time = millis();
 
   readSerialPort();
   if (strcmp(msg, manual) == 0) {
@@ -369,7 +367,7 @@ void loop() {
 
   if(auto_mode)  {
     if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-      stringSplitter(msg, &right_pwm_value, &right_dir_value, &left_pwm_value, &left_dir_value);
+      stringSplitter(msg, &right_rpm_value, &right_dir_value, &left_rpm_value, &left_dir_value);
       if(left_dir_value == -1){
         digitalWrite(redLed, HIGH);
         digitalWrite(AIN1, LOW);
@@ -379,7 +377,7 @@ void loop() {
         digitalWrite(AIN1, HIGH);
         digitalWrite(AIN2, LOW);
       }
-      analogWrite(ENA, left_pwm_value);
+      analogWrite(ENA, left_rpm_value);
 
       //*PID con RPM
       //error_velA = left_pwm_value - velA;
@@ -394,7 +392,7 @@ void loop() {
         digitalWrite(BIN1, HIGH);
         digitalWrite(BIN2, LOW);
       }
-      analogWrite(ENB, right_pwm_value);
+      analogWrite(ENB, right_rpm_value);
 
       //*PID con RPM
       //error_velB = right_pwm_value - velB;

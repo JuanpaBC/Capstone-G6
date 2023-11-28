@@ -200,8 +200,12 @@ class Pid:
         
         self.min_C = 180
         self.max_C = 255
+        self.max_velocity = 100
+        self.min_velocity = 0
         self.motor_R = 0
         self.motor_L = 0
+
+        self.velocity = 0
 
     def update_ang(self, error):
         self.E_ang__ = self.E_ang_
@@ -219,7 +223,7 @@ class Pid:
         self.E_ling = size
         self.C_lin_ = self.C_lin
         self.C_lin = (self.C_lin_
-                      + (self.Kp_lin+ self.Ts * self.Ki_lin + self.Kd__lin / self.Ts) * self.E_lin
+                      + (self.Kp_lin+ self.Ts * self.Ki_lin + self.Kd_lin / self.Ts) * self.E_lin
                       + (-self.Kp_lin - 2 * self.Kd_lin/self.Ts) * self.E_lin_
                       + (self.Kd_lin / self.Ts) * self.E_lin__)
         if abs(self.velocity) > self.max_velocity:#CHECK
@@ -235,11 +239,11 @@ class Pid:
         if distancia == "0": # there is not objective
             self.motor_L = 0
             self.motor_R = 0
-        else
+        else:
             distancia = int(distancia)
             size = int(size)
             ang_error = 0 if abs(distancia - self.ref_ang) < self.tol_ang else distancia
-            lin_error = 0 if abs(size - self.ref_lin) < self.tol_lin else size
+            lin_error = 0 if abs(size - self.ref_lin) < self.tol_size else size
             self.update(ang_error, lin_error)
             self.motor_L = self.check_limit(self.C_lin + self.C_ang)
             self.motor_R = self.check_limit(self.C_lin - self.C_ang)
