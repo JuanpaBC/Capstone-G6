@@ -10,7 +10,7 @@
 #define SCOOPDELAY 15
 
 #define ENA 6 // D6
-#define ENB 11
+#define ENB 13
 
 #define AIN1 4 // D1
 #define AIN2 5  // D0
@@ -24,7 +24,7 @@
 #define BC1 19
 #define BC2 18
 
-#define redLed 51
+#define redLed 22
 
 #define baud 9600
 
@@ -36,7 +36,7 @@ int angle = MINANG; // Defines an integer
 char msg[40];
 float scoop_debounce = 1000;
 float last_scoop = 0;
-int d = 32.5; // mm of wheel
+int r = 32.5; // mm of wheel
 int ratio_ruedas = 10;
 int steps = 12;
 
@@ -55,8 +55,8 @@ volatile bool scoopFlag = false;
 
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
-long encoderAPos_ = 0;
-long encoderBPos_ = 0;
+volatile long encoderAPos_ = 0;
+volatile long encoderBPos_ = 0;
 
 float velA; // [RPM]
 float velB; // [RPM]
@@ -86,15 +86,16 @@ float Kd_R = 0.00001;
 
 
 void callback() {
-  PID_L(&left_rpm_value, &encoderAPos_, &velA, &error_velA, &error_velA_, &error_velA__, &PWM_A, &PWM_A_);
+  PID_L(&right_rpm_value, &encoderBPos_, &velB, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_); 
   Serial.print(", ");
-  PID_R(&right_rpm_value, &encoderBPos_, &velB, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_);  
+  PID_R(&right_rpm_value, &encoderBPos_, &velB, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_); 
+  Serial.println();
 }
 
 
 void PID_L(int *left_rpm_value, long *encoderAPos_, float *velA,
            float *error_velA, float *error_velA_, float *error_velA__, float *PWM_A, float *PWM_A_){
-  *velA = float(encoderAPos - *encoderAPos_)/ delta_time / 60.0;
+  *velA = float(encoderAPos - *encoderAPos_)/0.2;
   *encoderAPos_ = encoderAPos;
   *error_velA__ = *error_velA_;
   *error_velA_ = *error_velA;
@@ -104,14 +105,25 @@ void PID_L(int *left_rpm_value, long *encoderAPos_, float *velA,
                + (Kp_L + delta_time*Ki_L + Kd_L/delta_time) * (*error_velA)
                + (-Kp_L - 2*Kd_L/delta_time) * (*error_velA_)
                + (Kd_L/delta_time) * (*error_velA__));
-  analogWrite(ENA, *PWM_A);
+  if (*PWM_A > 250.0) {
+    *PWM_A = 250.0;
+  } else if (*PWM_A < -250.0) {
+    *PWM_A = -250.0;
+  }
+  analogWrite(ENA, abs(int(round(*PWM_A))));
+  Serial.print("encoderAPos: ");
+  Serial.print(encoderAPos);
+  Serial.print(" | encoderAPos_: ");
+  Serial.print(*encoderAPos_);
   Serial.print("velA: ");
   Serial.print(*velA);
+  Serial.print(" | PWM_A: ");
+  Serial.print(abs(int(round(*PWM_A))));
 }
 
 void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
            float *error_velB, float *error_velB_, float *error_velB__, float *PWM_B, float *PWM_B_){
-  *velB = float(encoderBPos - *encoderBPos_)/ delta_time / 60.0;
+  *velB = float(encoderBPos - *encoderBPos_)/0.2;
   *encoderBPos_ = encoderBPos;
   *error_velB__ = *error_velB_;
   *error_velB_ = *error_velB;
@@ -121,10 +133,22 @@ void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
                + (Kp_R + delta_time*Ki_R + Kd_R/delta_time) * (*error_velB)
                + (-Kp_R - 2*Kd_R/delta_time) * (*error_velB_)
                + (Kd_R/delta_time) * (*error_velB__));
-  analogWrite(ENB, *PWM_B);
+  if (*PWM_B > 250.0) {
+    *PWM_B = 250.0;
+  } else if (*PWM_B < -250.0) {
+    *PWM_B = -250.0;
+  }
+  analogWrite(ENB, abs(int(round(*PWM_B))));
+  Serial.print("encoderBPos: ");
+  Serial.print(encoderBPos);
+  Serial.print(" | encoderBPos_: ");
+  Serial.print(*encoderBPos_);
   Serial.print("velB: ");
-  Serial.println(*velB);
+  Serial.print(*velB);
+  Serial.print(" | PWM_B: ");
+  Serial.print(abs(int(round(*PWM_B))));
 }
+
 
 
 void doEncoderA1()
@@ -174,6 +198,7 @@ void doEncoderB2()
         encoderBPos++;
     }
 }
+
 
 // ************** Función para mover la pala ***************
 void scoop()
@@ -257,9 +282,6 @@ void setup() {
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
 
-    servo.attach(ServoPin);    // States that the servo is attached to pin 5
-    servo.write(angle); // Sets the servo angle to 0 degrees
-
     pinMode(ENA, OUTPUT);
     pinMode(AIN1, OUTPUT);
     pinMode(AIN2, OUTPUT);
@@ -298,27 +320,27 @@ void loop() {
   time = millis();
 
   readSerialPort();
-    if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-      stringSplitter(msg, &right_rpm_value, &right_dir_value, &left_rpm_value, &left_dir_value);
-      
-      if(left_dir_value == -1){
-        digitalWrite(redLed, HIGH);
-        digitalWrite(AIN1, LOW);
-        digitalWrite(AIN2, HIGH);
-      }
-      else {
-        digitalWrite(AIN1, HIGH);
-        digitalWrite(AIN2, LOW);
-      }
-
-      if(right_dir_value == 1){
-        digitalWrite(BIN1, LOW);
-        digitalWrite(BIN2, HIGH);
-      }
-      else {
-        digitalWrite(BIN1, HIGH);
-        digitalWrite(BIN2, LOW);
-      }
+  if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
+    Serial.println(msg);
+    stringSplitter(msg, &right_rpm_value, &right_dir_value, &left_rpm_value, &left_dir_value);
+    if(left_dir_value == -1){
+      digitalWrite(AIN1, LOW);
+      digitalWrite(AIN2, HIGH);
     }
+    else {
+      digitalWrite(AIN1, HIGH);
+      digitalWrite(AIN2, LOW);
+    }
+    if(right_dir_value == 1){
+      digitalWrite(redLed, HIGH);
+      digitalWrite(BIN1, LOW);
+      digitalWrite(BIN2, HIGH);
+    }
+    else {
+      digitalWrite(redLed, LOW);
+      digitalWrite(BIN1, HIGH);
+      digitalWrite(BIN2, LOW);
+    }
+  }
   msg[0] = '\0';
 }

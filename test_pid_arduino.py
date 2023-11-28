@@ -158,12 +158,24 @@ read_messages_thread.start()
 
 running = True
 sendIt = True
+duration = 5  # Duration in seconds for each set of messages
+
+start_time = time.time()
+
+
 while running:
-    if sendIt:
-        coms.comunicacion('5,1,5,-1')
-        time.sleep(2)
-        coms.comunicacion('5,-1,5,1')
-        time.sleep(2)
-    else:
-        # Add any additional logic here if needed
-        pass
+    current_time = time.time()
+    elapsed_time = current_time - start_time
+
+    if elapsed_time >= duration:
+        start_time = current_time  # Reset the start time
+
+        if sendIt:
+            coms.comunicacion('60,1,60,1')
+
+        # Toggle the flag for the next iteration
+        sendIt = not sendIt
+
+    # Add any additional logic here if needed
+    pass
+

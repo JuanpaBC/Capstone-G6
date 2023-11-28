@@ -9,7 +9,7 @@
 #define SCOOPDELAY 15
 
 #define ENA 6 // D6
-#define ENB 11
+#define ENB 13
 
 #define AIN1 4 // D1
 #define AIN2 5  // D0
