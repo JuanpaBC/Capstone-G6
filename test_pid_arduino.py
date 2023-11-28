@@ -24,10 +24,14 @@ class Communication:
     
     def read_and_print_messages(self):
         while True:
-            if self.arduino.isOpen():
-                message = self.arduino.readline().decode('utf-8').strip()
-                if message:
-                    print(f'Received message from Arduino: {message}')
+            try:
+                if self.arduino.isOpen():
+                    message = self.arduino.readline().decode('utf-8').strip()
+                    if message:
+                        print(f'Recibiendo mensaje: {message}')
+                        self.arduino.flush()
+            except Exception as e:
+                print(f"Error reading message: {e}")
 
     def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
@@ -171,7 +175,7 @@ while running:
         start_time = current_time  # Reset the start time
 
         if sendIt:
-            coms.comunicacion('60,1,60,1')
+            coms.comunicacion('80,80')
 
         # Toggle the flag for the next iteration
         sendIt = not sendIt

@@ -37,8 +37,8 @@ char msg[40];
 float scoop_debounce = 1000;
 float last_scoop = 0;
 int r = 32.5; // mm of wheel
-int ratio_ruedas = 10;
-int steps = 12;
+int ratio_ruedas = 34.02;
+int steps = 11;
 
 unsigned long init_time = 0;
 unsigned long time = 0;
@@ -86,7 +86,7 @@ float Kd_R = 0.00001;
 
 
 void callback() {
-  PID_L(&right_rpm_value, &encoderBPos_, &velB, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_); 
+  PID_L(&left_rpm_value, &encoderAPos_, &velA, &error_velA, &error_velA_, &error_velA__, &PWM_A, &PWM_A_); 
   Serial.print(", ");
   PID_R(&right_rpm_value, &encoderBPos_, &velB, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_); 
   Serial.println();
@@ -94,8 +94,14 @@ void callback() {
 
 
 void PID_L(int *left_rpm_value, long *encoderAPos_, float *velA,
-           float *error_velA, float *error_velA_, float *error_velA__, float *PWM_A, float *PWM_A_){
-  *velA = float(encoderAPos - *encoderAPos_)/0.2;
+           float *error_velA, float *error_velA_, float *error_velA__, float *PWM_A, float *PWM_A_){      
+  *velA = (encoderAPos- *encoderAPos_) / delta_time * 60 / steps;                
+  //*velA = (float)(encoderAPos - *encoderAPos_) * (1.6033);                
+  //*velA = (float)(encoderAPos - *encoderAPos_) * 60 / (steps * ratio_ruedas * delta_time);
+  Serial.print("encoderAPos: ");
+  Serial.print(encoderAPos);
+  Serial.print(" | encoderAPos_: ");
+  Serial.print(*encoderAPos_);
   *encoderAPos_ = encoderAPos;
   *error_velA__ = *error_velA_;
   *error_velA_ = *error_velA;
@@ -111,19 +117,17 @@ void PID_L(int *left_rpm_value, long *encoderAPos_, float *velA,
     *PWM_A = -250.0;
   }
   analogWrite(ENA, abs(int(round(*PWM_A))));
-  Serial.print("encoderAPos: ");
-  Serial.print(encoderAPos);
-  Serial.print(" | encoderAPos_: ");
-  Serial.print(*encoderAPos_);
-  Serial.print("velA: ");
+  Serial.print(" | velA: ");
   Serial.print(*velA);
   Serial.print(" | PWM_A: ");
   Serial.print(abs(int(round(*PWM_A))));
 }
 
 void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
-           float *error_velB, float *error_velB_, float *error_velB__, float *PWM_B, float *PWM_B_){
-  *velB = float(encoderBPos - *encoderBPos_)/0.2;
+           float *error_velB, float *error_velB_, float *error_velB__, float *PWM_B, float *PWM_B_){      
+  *velB = (encoderBPos - *encoderBPos_) / delta_time * 60 / steps;                             
+  //*velB = (float)(encoderBPos - *encoderBPos_) * (1.6033);
+  //*velB = (float)(encoderBPos - *encoderBPos_) * 60 / (steps * ratio_ruedas * delta_time);
   *encoderBPos_ = encoderBPos;
   *error_velB__ = *error_velB_;
   *error_velB_ = *error_velB;
@@ -139,11 +143,7 @@ void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
     *PWM_B = -250.0;
   }
   analogWrite(ENB, abs(int(round(*PWM_B))));
-  Serial.print("encoderBPos: ");
-  Serial.print(encoderBPos);
-  Serial.print(" | encoderBPos_: ");
-  Serial.print(*encoderBPos_);
-  Serial.print("velB: ");
+  Serial.print(" | velB: ");
   Serial.print(*velB);
   Serial.print(" | PWM_B: ");
   Serial.print(abs(int(round(*PWM_B))));
@@ -151,29 +151,52 @@ void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
 
 
 
-void doEncoderA1()
-{
-    if (digitalRead(AC1) == digitalRead(AC2))
-    {
-        encoderAPos++;
+void ISR_EncoderA2() {
+  bool PinB = digitalRead(AC2);
+  bool PinA = digitalRead(AC1);
+
+  if (PinB == LOW) {
+    if (PinA == HIGH) {
+      EncoderACount++;
     }
-    else
-    {
-        encoderAPos--;
+    else {
+      EncoderACount--;
     }
+  }
+
+  else {
+    if (PinA == HIGH) {
+      EncoderACount--;
+    }
+    else {
+      EncoderACount++;
+    }
+  }
 }
 
-void doEncoderA2()
-{
-    if (digitalRead(AC1) == digitalRead(AC2))
-    {
-        encoderAPos--;
+void ISR_EncoderA1() {
+  bool PinB = digitalRead(AC2);
+  bool PinA = digitalRead(AC1);
+
+  if (PinA == LOW) {
+    if (PinB == HIGH) {
+      EncoderACount--;
     }
-    else
-    {
-        encoderAPos++;
+    else {
+      EncoderACount++;
     }
+  }
+
+  else {
+    if (PinB == HIGH) {
+      EncoderACount++;
+    }
+    else {
+      EncoderACount--;
+    }
+  }
 }
+
 
 void doEncoderB1()
 {
