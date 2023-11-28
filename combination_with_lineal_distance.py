@@ -194,13 +194,13 @@ class Pid:
     def init_pid_params(self):
         self.ref_ang = 0
         self.Kp_ang = 0.0001
+        self.Ki_ang = 0.001
         self.Kd_ang = 0.00001
-        self.Ki_ang = 0.000000001
         self.tol_ang = 50  # tolerancia a error
         self.ref_lin = 0
         self.Kp_lin = 0.5
-        self.Kd_lin = 0.01
-        self.Ki_lin = 0.001
+        self.Ki_lin = 0.01
+        self.Kd_lin = 0.001
         self.tol_size = 50
 
     def init_pid_vars(self):
