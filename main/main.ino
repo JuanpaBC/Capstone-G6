@@ -374,11 +374,8 @@ void loop() {
 
 
       Serial.print("velA: ");
-      Serial.println(velA);
-
-
-
-      
+      Serial.print(velA);
+      Serial.print(", ");
       if(right_dir_value == 1){
         digitalWrite(BIN1, LOW);
         digitalWrite(BIN2, HIGH);
@@ -432,8 +429,8 @@ void loop() {
 
   time_ = time;
   time  = millis();
+  delta_time = 0.02;
   //delta_time = float(time_ - time);
-  delta_time = 0.2;
   encoderAPos_ = encoderAPos;
   encoderBPos_ = encoderBPos;
   

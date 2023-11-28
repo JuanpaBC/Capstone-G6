@@ -160,10 +160,6 @@ running = True
 sendIt = True
 while running:
     if sendIt:
-        coms.comunicacion('10,1,10,1')
-        time.sleep(2)
-        coms.comunicacion('10,-1,10,-1')
-        time.sleep(2)
         coms.comunicacion('5,1,5,-1')
         time.sleep(2)
         coms.comunicacion('5,-1,5,1')
