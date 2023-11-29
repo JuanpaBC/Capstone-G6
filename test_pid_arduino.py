@@ -2,18 +2,18 @@ import cv2
 import numpy as np
 import serial
 import time
-#import keyboard
 import threading
-
-
+import matplotlib.pyplot as plt
+import csv
+last_data = ''
 class Communication:
     def __init__(self) -> None:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM4"
-        self.target_L = '/dev/ttyACM0'
+        self.target_L = '/dev/ttyACM0'  # Change this to your actual target
         self.baud = 9600
+        self.data = ''
 
     def begin(self):
         self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
@@ -21,13 +21,14 @@ class Communication:
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
-    
+
     def read_and_print_messages(self):
         while True:
             try:
                 if self.arduino.isOpen():
                     message = self.arduino.readline().decode('utf-8').strip()
                     if message:
+                        self.data = message
                         print(f'Recibiendo mensaje: {message}')
                         self.arduino.flush()
             except Exception as e:
@@ -40,15 +41,6 @@ class Communication:
             self.arduino.flush()
             self.arduino.write(mensaje.encode('utf-8'))
             time.sleep(0.1)
-        if False:  # self.manual_mode:
-            # Wait for an acknowledgment response from Arduino
-            time.sleep(5)
-            response = self.arduino.readline().decode('utf-8').strip()
-            print(response)
-            if response == "ACK":
-                print("Arduino received the message")
-            else:
-                print("Arduino did not acknowledge the message")
 
     def switch_mode(self):
         if self.manual_mode:
@@ -59,102 +51,13 @@ class Communication:
             print("Changing into manual mode")
         self.manual_mode = not self.manual_mode
 
-
 def track_wrapper(tracker):
     # This function is used to run the track() method in a separate thread.
     tracker.track()
 
-
-class Pid:
-    def __init__(self):
-        self.Ts = 0.2  # time sample
-        
-        self.init_pid_vars()
-        self.init_pid_params()
-        self.max_vel = 250
-        self.min_vel = 100
-        self.motor_R = 0
-        self.motor_L = 0
-
-    def init_pid_params(self):
-        self.ref_ang = 0
-        self.Kp_ang = 0.0001
-        self.Ki_ang = 0.001
-        self.Kd_ang = 0.00001
-        self.tol_ang = 50  # tolerancia a error
-        self.ref_lin = 0
-        self.Kp_lin = 0.5
-        self.Ki_lin = 0.01
-        self.Kd_lin = 0.001
-        self.tol_size = 50
-
-    def init_pid_vars(self):
-        self.E_ang = 0
-        self.E_ang_ = 0
-        self.E_ang__ = 0
-        self.C_ang = 0
-        self.C_ang_ = 0
-        self.E_lin = 0
-        self.E_lin_ = 0
-        self.E_lin__ = 0
-        self.C_lin = 0
-        self.C_lin_ = 0
-
-    def update_ang(self, error):
-        self.E_ang__ = self.E_ang_
-        self.E_ang_ = self.E_ang
-        self.E_ang = error
-        self.C_ang_ = self.C_ang
-        self.C_ang = (self.C_ang_
-                      + (self.Kp_ang + self.Ts*self.Ki_ang + self.Kd_ang/self.Ts)*self.E_ang
-                      + (-self.Kp_ang - 2*self.Kd_ang/self.Ts)*self.E_ang_
-                      + (self.Kd_ang/self.Ts)*self.E_ang__)
-        
-    def update_lin(self, size):
-        self.E_ling__ = self.E_lin_
-        self.E_ling_ = self.E_lin
-        self.E_ling = size
-        self.C_lin_ = self.C_lin
-        self.C_lin = (self.C_lin_
-                      + (self.Kp_lin+ self.Ts * self.Ki_lin + self.Kd_lin / self.Ts) * self.E_lin
-                      + (-self.Kp_lin - 2 * self.Kd_lin/self.Ts) * self.E_lin_
-                      + (self.Kd_lin / self.Ts) * self.E_lin__)
-
-    def update(self, error, size):
-        self.update_ang(error)
-        self.update_lin(size)
-
-    def make_control(self, distancia, size):
-        if distancia == "0": # there is not objective
-            self.motor_L = 0
-            self.motor_R = 0
-        else:
-            distancia = int(distancia)
-            size = int(size)
-            ang_error = 0 if abs(distancia - self.ref_ang) < self.tol_ang else distancia
-            lin_error = 0 if abs(size - self.ref_lin) < self.tol_size else size
-            self.update(ang_error, lin_error)
-            self.C_lin = 0
-            self.motor_L = self.check_limit(self.C_lin + self.C_ang)
-            self.motor_R = self.check_limit(self.C_lin - self.C_ang)
-        print("vel_lin", self.C_lin, "  vel_ang", self.C_ang, "  mR", self.motor_R, "  mL", self.motor_L)
-
-    def check_limit(self, vel):
-        if abs(vel) < self.min_vel:
-            return np.sign(vel) * self.min_vel
-        if abs(vel) > self.max_vel:
-            return np.sign(vel) * self.max_vel
-        return vel
-
-    def get_control(self):
-        right, left = [self.motor_R, self.motor_L]
-        return str(int(min(abs(right), 250))) + "," + str(int(np.sign(right))) + "," + str(int(min(abs(left), 250))) + "," + str(int(np.sign(left)))
-
-
 coms = Communication()
 coms.begin()
 
-control = Pid()
 # Start a separate thread to read and print messages from Arduino
 read_messages_thread = threading.Thread(target=coms.read_and_print_messages)
 read_messages_thread.daemon = True
@@ -162,24 +65,67 @@ read_messages_thread.start()
 
 running = True
 sendIt = True
-duration = 5  # Duration in seconds for each set of messages
+duration = 1  # Duration in seconds for each set of messages
 
 start_time = time.time()
 
+# CSV file configuration
+csv_file_path = 'serial_data.csv'
+csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
 
-while running:
-    current_time = time.time()
-    elapsed_time = current_time - start_time
+# External variables
+RPMA_values = []
+RPMB_values = []
+RPMref_values = []
+v_ref = str(150)
+try:
+    with open(csv_file_path, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(csv_header)
 
-    if elapsed_time >= duration:
-        start_time = current_time  # Reset the start time
+        while running:
+            current_time = time.time()
+            elapsed_time = current_time - start_time
 
-        if sendIt:
-            coms.comunicacion('80,80')
+            if elapsed_time >= duration:
+                start_time = current_time  # Reset the start time
 
-        # Toggle the flag for the next iteration
-        sendIt = not sendIt
+                if sendIt:
+                    coms.comunicacion(f"{v_ref} ,{v_ref}")
 
-    # Add any additional logic here if needed
-    pass
+                # Toggle the flag for the next iteration
+                sendIt = not sendIt
+            if(len(coms.data.split(','))>=3 and coms.data != last_data):
+                # Extract RPMA, RPMB, RPMref from the updated 'data'
+                timestamp, aData, bData = coms.data.split(',')
+                aParts = aData.split('|')
+                BParts = bData.split('|')
+                ARef = float(aParts[0].split(':')[1])
+                RPMA = float(aParts[1].split(':')[1])
+                BRef = float(BParts[0].split(':')[1])
+                RPMB = float(BParts[1].split(':')[1])
+                # Save data to lists
+                RPMA_values.append(RPMA)
+                RPMB_values.append(RPMB)
+                RPMref_values.append(ARef)
+                # Save data to CSV
+                csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
+                last_data = coms.data
 
+                time.sleep(0.1)  # Adjust sleep time based on your application
+
+except KeyboardInterrupt:
+    print("Data collection interrupted.")
+
+finally:
+    # Close the serial port
+    coms.arduino.close()
+
+# Plot the results
+plt.plot(RPMA_values, label='RPMA')
+plt.plot(RPMB_values, label='RPMB')
+plt.plot(RPMref_values, label='RPMref')
+plt.xlabel('Time (s)')
+plt.ylabel('RPM')
+plt.legend()
+plt.show()
