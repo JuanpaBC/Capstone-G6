@@ -9,18 +9,18 @@
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15
 
-#define ENA 6 // D6
-#define ENB 12
+#define ENA 6 // D6, pin de salida de pwm al motor A
+#define ENB 12 // pin de salida de pwm al motor B
 
-#define AIN1 4 // D4
-#define AIN2 5 // D5
-#define BIN1 10 // D10
-#define BIN2 9 // D9
+#define AIN1 4 // D4, pin 1 de control de dirección del motor A (salida de señal)
+#define AIN2 5 // D5, pin 2 de control de dirección del motor A (salida de señal)
+#define BIN1 10 // D10, pin 1 de control de dirección del motor B (salida de señal)
+#define BIN2 9 // D9, pin 2 de control de dirección del motor B (salida de señal)
 
-#define AC1 21 // D2
-#define AC2 20 // D3
-#define BC1 19 // D7
-#define BC2 18 // D8
+#define AC1 21 // D2, pin 1 de encoder de motor A (entrada de señal)
+#define AC2 20 // D3, pin 2 de encoder de motor A (entrada de señal)
+#define BC1 19 // D7, pin 1 de encoder de motor B (entrada de señal) 
+#define BC2 18 // D8, pin 2 de encoder de motor B (entrada de señal)
 
 #define baud 9600
 
@@ -36,21 +36,23 @@ float kp_B = 0.022;
 float ki_B = 0.00001 ;
 float kd_B = 0;
 
+// variables para el cálculo de dt
 unsigned long t;
 unsigned long t_prev = 0;
 
-volatile long EncoderCountA = 0;
-volatile long EncoderCountB = 0;
+volatile long EncoderCountA = 0; // contador que representa cuánto ha girado el motor A
+volatile long EncoderCountB = 0; // contador que representa cuánto ha girado el motor B
 //--------------------------- Pines---------------------------
 
-volatile unsigned long count = 0;
+volatile unsigned long count = 0; // contador que se incrementa con un timer (?)
 unsigned long count_prev = 0;
 
+// variables para el cálculo de RPM de los motores
 float ThetaA, ThetaB, RPM_A, RPM_B, RPM_d_A, RPM_d_B;
 float ThetaA_prev = 0;
 float ThetaB_prev = 0;
 int dt;
-float RPM_max = 230;
+float RPM_max = 350;
 
 float Vmax = 6;
 float Vmin = -6;
