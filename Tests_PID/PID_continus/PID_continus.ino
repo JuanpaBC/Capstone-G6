@@ -28,14 +28,14 @@
 Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
 // ************ DEFINITIONS A************
-float kp_A = 0.02;
-float ki_A = 0.00015 ;
-float kd_A = 0;
+float kp_A = 1.8;
+float ki_A = 0.001;
+float kd_A = 0.005;
 
 // ************ DEFINITIONS A************
-float kp_B = 0.02;
-float ki_B = 0.00015 ;
-float kd_B = 0;
+float kp_B = 2;
+float ki_B = 0.0015 ;
+float kd_B = 0.001;
 
 unsigned long t = 0;
 unsigned long t_prev = 0;
@@ -50,7 +50,7 @@ unsigned long count_prev = 0;
 float ThetaA, ThetaB;
 float ThetaA_prev, ThetaB_prev;
 float RPM_A, RPM_B;
-float RPM_A_ref ;
+float RPM_A_ref;
 float RPM_B_ref;
 float NFactor = 1500;
 
@@ -270,8 +270,8 @@ void loop() {
       inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
       PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
       PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
-      PWM_A_val = CheckPWM(PWM_A_val);
-      PWM_B_val = CheckPWM(PWM_B_val);
+      //PWM_A_val = CheckPWM(PWM_A_val);
+      //PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
 

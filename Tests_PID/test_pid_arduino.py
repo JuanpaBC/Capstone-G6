@@ -73,11 +73,12 @@ start_time = time.time()
 csv_file_path = 'serial_data.csv'
 csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
 
+RPMref_values = [50,100,150,200]
 # External variables
 RPMA_values = []
 RPMB_values = []
-RPMref_values = []
 v_ref = str(250)
+i = 0
 try:
     with open(csv_file_path, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
@@ -91,9 +92,10 @@ try:
                 start_time = current_time  # Reset the start time
 
                 if sendIt:
-                    
-                    coms.comunicacion(f"{200} ,{200}")
-
+                    if(i==0):
+                        coms.comunicacion(f"{RPMref_values[3]} ,{RPMref_values[3]}")
+                    if(i!=3):
+                        i= i+1
                 # Toggle the flag for the next iteration
                 sendIt = not sendIt
             if(len(coms.data.split(','))>=3 and coms.data != last_data):
