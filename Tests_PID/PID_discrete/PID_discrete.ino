@@ -30,13 +30,13 @@ Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
 // ************ DEFINITIONS A************
 float kp_A = 0.02;
-float ki_A = 0.00015 ;
-float kd_A = 0;
+float ki_A = 0.00005 ;
+float kd_A = 0.0001;
 
 // ************ DEFINITIONS A************
 float kp_B = 0.02;
-float ki_B = 0.00015 ;
-float kd_B = 0;
+float ki_B = 0.0000 ;
+float kd_B = 0.000;
 
 unsigned long t = 0;
 unsigned long t_prev = 0;
@@ -260,26 +260,19 @@ void loop() {
       t = millis();
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
-      dt = (t - t_prev)/1000; // [s]
-      RPM_A = (ThetaA - ThetaA_prev)/ dt * NFactor * 60 / NFactor;
-      RPM_B = (ThetaB - ThetaB_prev)/ dt * NFactor * 60 / NFactor;
+      dt = t - t_prev; // [s]
+      RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60 / NFactor;
+      RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60 / NFactor;
       e_A__ = e_A_;
       e_B__ = e_B_;
       e_A_ = e_A;
       e_B_ = e_B;
       e_A = RPM_A_ref - RPM_A;
       e_B = RPM_B_ref - RPM_B;
-      PWM_A_val = PWM_A_val;
-      PWM_B_val = PWM_B_val;
-
-      PWM_A_val = int(PWM_A_val_
-                      + (kp_A + dt*ki_A + kd_A/dt) * e_A
-                      + (-kp_A - 2*kd_A/dt) * e_A_
-                      + (kd_A/dt) * e_A__);
-      PWM_B_val = int(PWM_B_val_
-                      + (kp_B + dt*ki_B + kd_B/dt) * e_B
-                      + (-kp_B - 2*kd_B/dt) * e_B_
-                      + (kd_B/dt) * e_B__);
+      PWM_A_val_ = PWM_A_val;
+      PWM_B_val_ = PWM_B_val;
+      PWM_A_val = int(PWM_A_val_ + kp_A*(1 + dt*ki_A/1000 + 1000*kd_A/dt)*e_A + -kp_A*(1 + 2000*kd_A/dt)*e_A_ + (1000*kp_A*kd_A/dt)*e_A__);
+      PWM_B_val = int(PWM_B_val_ + kp_B*(1 + dt*ki_B/1000 + 1000*kd_B/dt)*e_B + -kp_B*(1 + 2000*kd_B/dt)*e_B_ + (1000*kp_B*kd_B/dt)*e_B__);
       PWM_A_val = CheckPWM(PWM_A_val);
       PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
@@ -303,15 +296,10 @@ void loop() {
       Serial.print(RPM_B);
       Serial.println("");
 
-      inte_A = inte_prev_A;
-      inte_B = inte_prev_B;
       ThetaA_prev = ThetaA;
       ThetaB_prev = ThetaB;
       count_prev = count;
       t_prev = t;
-      inte_prev_A = inte_A;
-      inte_prev_B = inte_B;
-      e_prev_A = e_A;
-      e_prev_B = e_B;
+  
   }
 }
