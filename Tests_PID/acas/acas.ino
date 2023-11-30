@@ -45,63 +45,69 @@ volatile long EncoderCountB = 0;
 
 volatile unsigned long count = 0;
 unsigned long count_prev = 0;
-float RPM_d_B = 200;
-float RPM_d_A = 200;
-float ThetaA, ThetaB, RPM_A, RPM_B;
-float ThetaA_prev = 0;
-float ThetaB_prev = 0;
-int dt;
-float RPM_max = 230;
 
-float Vmax = 6;
-float Vmin = -6;
-float V_A = 0.1;
-float V_B = 0.1;
-float e_A, e_prev_A = 0, inte_A, inte_prev_A = 0;
-float e_B, e_prev_B = 0, inte_B, inte_prev_B = 0;
+float ThetaA, ThetaB;
+float ThetaA_prev, ThetaB_prev;
+float RPM_A, RPM_B;
+float RPM_A_ref, RPM_B_ref;
+float NFactor = 3/11;
+
+float e_A, e_prev_A;
+float inte_A, inte_prev_A;
+float e_B, e_prev_B;
+float inte_B, inte_prev_B;
+int dt;
+
+int PWM_A_val, PWM_B_val;
+int PWM_min = 150;
+int PWM_max = 255;
 
 char msg[60];
 int ratio_ruedas = 34.02;
 //***Motor Driver Functions*****
 
-void WriteDriverVoltageA(float V, float Vmax) {
-  int PWMval = int(255 * abs(V) / Vmax);
-  if (PWMval > 255) {
-    PWMval = 255;
-  }
-  Serial.print("A: ");
-  Serial.println(PWMval);
-  if (V > 0) {
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-  }
-  else {if (V < 0) {
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-  } else {
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, LOW);
-  }}
-  analogWrite(ENA, PWMval);
+int CheckPWM(int PWM_val)
+{
+    if (abs(PWM_val) < PWM_min){
+        return int(sign(PWM_val) * PWM_min);
+    }
+    if (abs(PWM_val) > PWM_max){
+        return int(sign(PWM_val) * PWM_max);
+    }
+    return PWM_val;
 }
 
-
-void WriteDriverVoltageB(float V, float Vmax) {
-  int PWMBval = int(255 * abs(V) / Vmax);
-  if (PWMBval > 255) {
-    PWMBval = 255;
-  }
-  if (V < 0) {
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-  } else {if (V > 0) {
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-  } else {
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, LOW);
-  }}
-  analogWrite(ENB, PWMBval);
+void WriteDriverVoltageA(int PWM_val)
+{
+    if (PWM_val > 0){
+        digitalWrite(AIN1, HIGH);
+        digitalWrite(AIN2, LOW);
+    }
+    else if (PWM_val < 0){
+        digitalWrite(AIN1, LOW);
+        digitalWrite(AIN2, HIGH);
+    }
+    else{
+        digitalWrite(AIN1, LOW);
+        digitalWrite(AIN2, LOW);
+    }
+    analogWrite(ENA, abs(PWM_val));
+}
+void WriteDriverVoltageB(int PWM_val)
+{
+    if (PWM_val < 0){
+        digitalWrite(BIN1, HIGH);
+        digitalWrite(BIN2, LOW);
+    }
+    else if (PWM_val > 0){
+        digitalWrite(BIN1, LOW);
+        digitalWrite(BIN2, HIGH);
+    }
+    else{
+        digitalWrite(BIN1, LOW);
+        digitalWrite(BIN2, LOW);
+    }
+    analogWrite(ENB, abs(PWM_val));
 }
 
 void ISR_EncoderA2() {
@@ -126,7 +132,6 @@ void ISR_EncoderA2() {
     }
   }
 }
-
 void ISR_EncoderA1() {
   bool PinB = digitalRead(AC2);
   bool PinA = digitalRead(AC1);
@@ -149,7 +154,6 @@ void ISR_EncoderA1() {
     }
   }
 }
-
 void ISR_EncoderB2() {
   bool PinB = digitalRead(BC2);
   bool PinA = digitalRead(BC1);
@@ -216,7 +220,7 @@ void stringSplitter(char *msg, float *left_rpm, float *right_rpm) {
   }
 }
 
-float sign(float x) {
+float sign(int x) {
   if (x > 0) {
     return 1;
   } else if (x < 0) {
@@ -246,65 +250,54 @@ void setup() {
 void loop() {
   readSerialPort();
   if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-    stringSplitter(msg, &RPM_d_A, &RPM_d_B);
+    stringSplitter(msg, &RPM_A_ref, &RPM_B_ref);
     msg[0] == '\0';
   }
   if ((millis() - t_prev)>= 100) {
-    t = millis();
-    ThetaA = EncoderCountA / 374.22;
-    ThetaB = EncoderCountB / 374.22;
-    dt = (t - t_prev);
-    RPM_A = (ThetaA - ThetaA_prev) / (3.202*dt / 1000.0) * 60;
-    RPM_B = (ThetaB - ThetaB_prev) / (3.202*dt / 1000.0) * 60;
-    e_A = RPM_d_A - RPM_A;
-    e_B = RPM_d_B - RPM_B;
-    inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
-    inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
-    V_A = kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt);
-    V_B = kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt);
-    if (V_A > Vmax) {
-      V_A = Vmax;
+      t = millis();
+      ThetaA = EncoderCountA;
+      ThetaB = EncoderCountB;
+      dt = (t - t_prev)/1000; // [s]
+      RPM_A = (ThetaA - ThetaA_prev)/ dt * NFactor * 60;
+      RPM_B = (ThetaB - ThetaB_prev)/ dt * NFactor * 60;
+      e_A = RPM_A_ref - RPM_A;
+      e_B = RPM_B_ref - RPM_B;
+      inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
+      inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
+      PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
+      PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
+      PWM_A_val = CheckPWM(PWM_A_val);
+      PWM_B_val = CheckPWM(PWM_B_val);
+      WriteDriverVoltageA(PWM_A_val);
+      WriteDriverVoltageB(PWM_B_val);
+
+      Serial.print(count * 0.05);
+      Serial.print(", ");
+      Serial.print("refA: ");
+      Serial.print(RPM_A_ref);
+      // Serial.print("EncoderCountA: ");
+      // Serial.print(EncoderCountA);
+      Serial.print(" | RPMA: ");
+      Serial.print(RPM_A);
+      Serial.print(", ");
+
+      Serial.print("refB: ");
+      Serial.print(RPM_B_ref);
+      // Serial.print("EncoderCountB: ");
+      // Serial.print(EncoderCountB);
+      Serial.print(" | RPM_B: ");
+      Serial.print(RPM_B);
+      Serial.println("");
+
       inte_A = inte_prev_A;
-    }
-    if (V_A < Vmin) {
-      V_A = Vmin;
-      inte_A = inte_prev_A;
-    }
-    if (V_B > Vmax) {
-      V_B = Vmax;
       inte_B = inte_prev_B;
-    }
-    if (V_B < Vmin) {
-      V_B = Vmin;
-      inte_B = inte_prev_B;
-    }
-    WriteDriverVoltageB(V_B, Vmax);
-    WriteDriverVoltageA(V_A, Vmax);
-
-    Serial.print(t);
-    Serial.print(", ");
-    Serial.print("refA: ");
-    Serial.print(RPM_d_A);
-    //Serial.print("EncoderCountA: ");
-    //Serial.print(EncoderCountA);
-    Serial.print(" | RPMA: ");
-    Serial.print(RPM_A);
-    Serial.print(", ");
-
-    Serial.print("refB: ");
-    Serial.print(RPM_d_B);
-    //Serial.print("EncoderCountB: ");
-    //Serial.print(EncoderCountB);
-    Serial.print(" | RPM_B: ");
-    Serial.print(RPM_B);
-    Serial.println("");
-
-    ThetaA_prev = ThetaA;
-    ThetaB_prev = ThetaB;
-    t_prev = t;
-    inte_prev_A = inte_A;
-    inte_prev_B = inte_B;
-    e_prev_A = e_A;
-    e_prev_B = e_B;
+      ThetaA_prev = ThetaA;
+      ThetaB_prev = ThetaB;
+      count_prev = count;
+      t_prev = t;
+      inte_prev_A = inte_A;
+      inte_prev_B = inte_B;
+      e_prev_A = e_A;
+      e_prev_B = e_B;
   }
 }
