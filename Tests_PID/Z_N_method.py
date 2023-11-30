@@ -13,7 +13,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_L = 'COM4'  # '/dev/ttyACM0'  # Change this to your actual target
+        self.target_L = '/dev/ttyACM0'  # '/dev/ttyACM0'  # Change this to your actual target
         self.baud = 9600
         self.data = ''
 
@@ -68,50 +68,48 @@ read_messages_thread.start()
 
 running = True
 sendIt = True
-duration = 1  # Duration in seconds for each set of messages
+duration = 0.01  # Duration in seconds for each set of messages
 
 start_time = time.time()
 
 # CSV file configuration
 csv_file_path = 'serial_data.csv'
-csv_header = ['Time', 'KpB', 'RPMB', 'ARPMref', 'BRPMref']
+csv_header = ['Time', 'KpB', 'RPMB', 'BRPMref']
 
 # External variables
-KpB_values = np.linspace(0.0, 0.1, 100).tolist()  # List of 100 values from 0.0 to 0.1
+KpB_valuesref = np.linspace(0.0, 0.1, 100).tolist()  # List of 100 values from 0.0 to 0.1
+KpB_values = []
 RPMB_values = []
 RPMref_values = []
 v_ref = str(250)
+i  = 0
 try:
-    with open(csv_file_path, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(csv_header)
+    while i <= len(KpB_valuesref ):
+        with open(csv_file_path, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(csv_header)
 
-        for KpB in KpB_values:
-            current_time = time.time()
-            elapsed_time = current_time - start_time
-
-            if elapsed_time >= duration:
+            for KpB in KpB_valuesref:
+                current_time = time.time()
                 start_time = current_time  # Reset the start time
-
-                if sendIt:
-                    coms.comunicacion(f"{KpB} ,{v_ref}")
-
-                # Toggle the flag for the next iteration
-                sendIt = not sendIt
-            if (len(coms.data.split(',')) >= 3 and coms.data != last_data):
-                # Extract KpB, RPMB, RPMref from the updated 'data'
-                timestamp, bData = coms.data.split(',')
-                BParts = bData.split('|')
-                BRef = float(BParts[0].split(':')[1])
-                RPMB = float(BParts[1].split(':')[1])
-                # Save data to lists
-                RPMB_values.append(RPMB)
-                RPMref_values.append(BRef)
-                # Save data to CSV
-                csv_writer.writerow([timestamp, KpB, RPMB, BRef])
-                last_data = coms.data
-
-                time.sleep(0.1)  # Adjust sleep time based on your application
+                elapsed_time = current_time - start_time
+                while(elapsed_time < duration):
+                    current_time = time.time()
+                    elapsed_time = current_time - start_time
+                    if (len(coms.data.split(',')) >= 2 and coms.data != last_data):
+                        # Extract KpB, RPMB, RPMref from the updated 'data'
+                        Time, Bparts = coms.data.split(',')
+                        refB, RPMB, kpbrec = Bparts.split('|')
+                          # Assuming KpB is the third part of bData
+                        # Save data to lists
+                        RPMB_values.append(RPMB.split(':')[1].strip())
+                        RPMref_values.append(refB.split(':')[1].strip())
+                        KpB_values.append(kpbrec.split(':')[1].strip())  # Update KpB_values in the same loop
+                        # Save data to CSV
+                        csv_writer.writerow([Time, kpbrec.split(':')[1].strip(), RPMB.split(':')[1].strip(), refB.split(':')[1].strip()])
+                        last_data = coms.data
+                        i = i+1
+                coms.comunicacion(f"{str(round(KpB, 3))} ,{v_ref}")
 
 except KeyboardInterrupt:
     print("Data collection interrupted.")

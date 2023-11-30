@@ -91,7 +91,8 @@ try:
                 start_time = current_time  # Reset the start time
 
                 if sendIt:
-                    coms.comunicacion(f"{60} ,{60}")
+                    
+                    coms.comunicacion(f"{200} ,{200}")
 
                 # Toggle the flag for the next iteration
                 sendIt = not sendIt
@@ -104,7 +105,7 @@ try:
                 RPMA = float(aParts[1].split(':')[1])
                 BRef = float(BParts[0].split(':')[1])
                 RPMB = float(BParts[1].split(':')[1])
-                # Save data to lists
+                # Save data to listsc
                 RPMA_values.append(RPMA)
                 RPMB_values.append(RPMB)
                 RPMref_values.append(ARef)
