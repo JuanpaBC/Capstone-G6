@@ -10,7 +10,7 @@
 #define SCOOPDELAY 15
 
 #define ENA 6 // D6
-#define ENB 11
+#define ENB 13
 
 #define AIN1 4 // D1
 #define AIN2 5  // D0
@@ -24,7 +24,7 @@
 #define BC1 19
 #define BC2 18
 
-#define redLed 51
+#define redLed 22
 
 #define baud 9600
 
@@ -32,31 +32,13 @@
 Servo servo;   // Defines the object Servo of type(class) Servo
 int angle = MINANG; // Defines an integer
 
-// Python commands
-char left[] = "L";
-char right[] = "R";
-char forward[] = "U";
-char backwards[] = "D";
-char scoopeSignal[] = "S";
-char manual[] = "M";
-char automatic[] = "N";
 
 char msg[40];
-bool auto_mode = true;
 float scoop_debounce = 1000;
 float last_scoop = 0;
-int d = 32.5; // mm of wheel
-int ratio_ruedas = 10;
-int steps = 12;
-int state = 8;
-int delay_time = 0.002;
-float avance;
-int enable = 0;
-bool pressed = true;
-int PWM = 250;
-
-int countdown = 5;
-int printedCountdown = -1;
+int r = 32.5; // mm of wheel
+int ratio_ruedas = 34.02;
+int steps = 11;
 
 unsigned long init_time = 0;
 unsigned long time = 0;
@@ -71,8 +53,8 @@ volatile bool scoopFlag = false;
 
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
-long encoderAPos_ = 0;
-long encoderBPos_ = 0;
+volatile long encoderAPos_ = 0;
+volatile long encoderBPos_ = 0;
 
 float velA; // [RPM]
 float velB; // [RPM]
@@ -100,6 +82,7 @@ float Ki_R = 0.01;
 float Kd_R = 0.01;
 
 
+<<<<<<< HEAD
 void callback()
 {
     Serial.print("enc");
@@ -130,101 +113,121 @@ void callback()
     Serial.print(velA);
     Serial.print("velB: ");
     Serial.println(velB);
+=======
+
+void callback() {
+  PID_L(&left_rpm_value, &encoderAPos_, &velA, &error_velA, &error_velA_, &error_velA__, &PWM_A, &PWM_A_); 
+  Serial.print(", ");
+  PID_R(&right_rpm_value, &encoderBPos_, &velB, &error_velB, &error_velB_, &error_velB__, &PWM_B, &PWM_B_); 
+  Serial.println();
 }
 
-// ************** Función para retroceder ***************
-void Atras(int pwm_ref)
-{
-    // Avanzar motor A
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
+
+void PID_L(int *left_rpm_value, long *encoderAPos_, float *velA,
+           float *error_velA, float *error_velA_, float *error_velA__, float *PWM_A, float *PWM_A_){      
+  *velA = (encoderAPos- *encoderAPos_) / delta_time * 60 / steps;                
+  //*velA = (float)(encoderAPos - *encoderAPos_) * (1.6033);                
+  //*velA = (float)(encoderAPos - *encoderAPos_) * 60 / (steps * ratio_ruedas * delta_time);
+  Serial.print("encoderAPos: ");
+  Serial.print(encoderAPos);
+  Serial.print(" | encoderAPos_: ");
+  Serial.print(*encoderAPos_);
+  *encoderAPos_ = encoderAPos;
+  *error_velA__ = *error_velA_;
+  *error_velA_ = *error_velA;
+  *error_velA = *left_rpm_value - *velA;
+  *PWM_A_ = *PWM_A;
+  *PWM_A = (*PWM_A_ 
+               + (Kp_L + delta_time*Ki_L + Kd_L/delta_time) * (*error_velA)
+               + (-Kp_L - 2*Kd_L/delta_time) * (*error_velA_)
+               + (Kd_L/delta_time) * (*error_velA__));
+  if (*PWM_A > 250.0) {
+    *PWM_A = 250.0;
+  } else if (*PWM_A < -250.0) {
+    *PWM_A = -250.0;
+  }
+  analogWrite(ENA, abs(int(round(*PWM_A))));
+  Serial.print(" | velA: ");
+  Serial.print(*velA);
+  Serial.print(" | PWM_A: ");
+  Serial.print(abs(int(round(*PWM_A))));
 }
 
-// ************** Función para parar ***************
-void Parar()
-{
-    // Detener motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, 0);
-
-    // Detener motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, 0);
+void PID_R(int *right_rpm_value, long *encoderBPos_, float *velB,
+           float *error_velB, float *error_velB_, float *error_velB__, float *PWM_B, float *PWM_B_){      
+  *velB = (encoderBPos - *encoderBPos_) / delta_time * 60 / steps;                             
+  //*velB = (float)(encoderBPos - *encoderBPos_) * (1.6033);
+  //*velB = (float)(encoderBPos - *encoderBPos_) * 60 / (steps * ratio_ruedas * delta_time);
+  *encoderBPos_ = encoderBPos;
+  *error_velB__ = *error_velB_;
+  *error_velB_ = *error_velB;
+  *error_velB = *right_rpm_value - *velB;
+  *PWM_B_ = *PWM_B;
+  *PWM_B = (*PWM_B_ 
+               + (Kp_R + delta_time*Ki_R + Kd_R/delta_time) * (*error_velB)
+               + (-Kp_R - 2*Kd_R/delta_time) * (*error_velB_)
+               + (Kd_R/delta_time) * (*error_velB__));
+  if (*PWM_B > 250.0) {
+    *PWM_B = 250.0;
+  } else if (*PWM_B < -250.0) {
+    *PWM_B = -250.0;
+  }
+  analogWrite(ENB, abs(int(round(*PWM_B))));
+  Serial.print(" | velB: ");
+  Serial.print(*velB);
+  Serial.print(" | PWM_B: ");
+  Serial.print(abs(int(round(*PWM_B))));
+>>>>>>> e013f8077e1b88ddeda8f89027be55abe4b91f3c
 }
 
-// ************** Función para ir hacia avanzar ***************
-void Avanzar(int pwm_ref)
-{
-    // Retroceder motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
 
-    // Retroceder motor B
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
-}
 
-// ************** Función para doblar a la derecha ***************
-void Doblar_derecha(int pwm_ref)
-{
-    // Avanzar motor A
-    digitalWrite(AIN1, HIGH);
-    digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, HIGH);
-    digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
-}
+void ISR_EncoderA2() {
+  bool PinB = digitalRead(AC2);
+  bool PinA = digitalRead(AC1);
 
-// ************** Función para doblar a la izquierda ***************
-void Doblar_izquierda(int pwm_ref)
-{
-    // Avanzar motor A
-    digitalWrite(AIN1, LOW);
-    digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
-    
-    // Avanzar motor B
-    digitalWrite(BIN1, LOW);
-    digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
-}
-
-void doEncoderA1()
-{
-    if (digitalRead(AC1) == digitalRead(AC2))
-    {
-        encoderAPos++;
+  if (PinB == LOW) {
+    if (PinA == HIGH) {
+      EncoderACount++;
     }
-    else
-    {
-        encoderAPos--;
+    else {
+      EncoderACount--;
     }
+  }
+
+  else {
+    if (PinA == HIGH) {
+      EncoderACount--;
+    }
+    else {
+      EncoderACount++;
+    }
+  }
 }
 
-void doEncoderA2()
-{
-    if (digitalRead(AC1) == digitalRead(AC2))
-    {
-        encoderAPos--;
+void ISR_EncoderA1() {
+  bool PinB = digitalRead(AC2);
+  bool PinA = digitalRead(AC1);
+
+  if (PinA == LOW) {
+    if (PinB == HIGH) {
+      EncoderACount--;
     }
-    else
-    {
-        encoderAPos++;
+    else {
+      EncoderACount++;
     }
+  }
+
+  else {
+    if (PinB == HIGH) {
+      EncoderACount++;
+    }
+    else {
+      EncoderACount--;
+    }
+  }
 }
+
 
 void doEncoderB1()
 {
@@ -249,6 +252,7 @@ void doEncoderB2()
         encoderBPos++;
     }
 }
+
 
 // ************** Función para mover la pala ***************
 void scoop()
@@ -319,7 +323,7 @@ void checkDistance()
   float distance = duration * 0.034 / 2;
 
   Serial.println(distance);
-  if (auto_mode && distance < 8) {
+  if (distance < 8) {
     scoop();
     delay(scoop_debounce);
   }
@@ -331,9 +335,6 @@ void setup() {
 
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
-
-    servo.attach(ServoPin);    // States that the servo is attached to pin 5
-    servo.write(angle); // Sets the servo angle to 0 degrees
 
     pinMode(ENA, OUTPUT);
     pinMode(AIN1, OUTPUT);
@@ -373,6 +374,7 @@ void loop() {
   time = millis();
 
   readSerialPort();
+<<<<<<< HEAD
   if (strcmp(msg, manual) == 0) {
     auto_mode = false;
   }
@@ -405,33 +407,29 @@ void loop() {
       }
       analogWrite(ENB, int(0));
 
+=======
+  if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
+    Serial.println(msg);
+    stringSplitter(msg, &right_rpm_value, &right_dir_value, &left_rpm_value, &left_dir_value);
+    if(left_dir_value == -1){
+      digitalWrite(AIN1, LOW);
+      digitalWrite(AIN2, HIGH);
+>>>>>>> e013f8077e1b88ddeda8f89027be55abe4b91f3c
     }
-  }
-
-  else {
-    digitalWrite(redLed, LOW);
-    if(msg == forward){
-      checkDistance();
-      Avanzar(PWM);
+    else {
+      digitalWrite(AIN1, HIGH);
+      digitalWrite(AIN2, LOW);
     }
-    else if(msg == backwards){
-      Atras(PWM);
+    if(right_dir_value == 1){
+      digitalWrite(redLed, HIGH);
+      digitalWrite(BIN1, LOW);
+      digitalWrite(BIN2, HIGH);
     }
-    else if(msg == left){
-      Doblar_izquierda(PWM);
-    }
-    else if(msg == right){
-      Doblar_derecha(PWM);
-    }
-    else if(msg == scoopeSignal){
-      scoop();
-    }
-    else if(msg[0] == '\0') {
-      Parar();
+    else {
+      digitalWrite(redLed, LOW);
+      digitalWrite(BIN1, HIGH);
+      digitalWrite(BIN2, LOW);
     }
   }
   msg[0] = '\0';
-
-  
-
 }

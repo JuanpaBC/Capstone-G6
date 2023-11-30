@@ -43,6 +43,7 @@ bool pressed = true;
 int PWM = 250;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
+int co = 0;
 
 long newpositionA;
 long oldpositionA = 0;
@@ -69,12 +70,12 @@ void Avanzar(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
+    analogWrite(ENA, 255);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
+    analogWrite(ENB, 50);
 }
 
 // ************** Función para parar ***************
@@ -104,7 +105,7 @@ void Atras(int pwm_ref)
     // Retroceder motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
+    analogWrite(ENB, 254);
 }
 
 // ************** Función para doblar a la derecha ***************
@@ -278,7 +279,9 @@ void loop()
         if ((micros() - ref_time) * 0.000001 > 5)
         {
             state = 2;
-            Atras(PWM);
+            digitalWrite(BIN1, LOW);
+            digitalWrite(BIN2, HIGH);
+            analogWrite(ENB, 250);
         }
         break;
 
@@ -344,13 +347,15 @@ void loop()
       donothing();
     case 10:
         digitalWrite(redLed, HIGH);
-        int c =  round(countdown - micros()* 0.000001);
-        if(c != printedCountdown){
-          printedCountdown = c;
+        co =  round(countdown - micros()* 0.000001);
+        if(co != printedCountdown){
+          printedCountdown = co;
         }
         if ((micros()) * 0.000001 > 5)
         {
-          Avanzar(PWM);
+          digitalWrite(BIN1, LOW);
+          digitalWrite(BIN2, HIGH);
+          analogWrite(ENB, 50);
           state = 0;
           digitalWrite(redLed, LOW);
         }
