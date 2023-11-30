@@ -52,20 +52,19 @@ float ThetaA, ThetaB;
 float ThetaA_prev, ThetaB_prev;
 float RPM_A, RPM_B;
 float RPM_A_ref, RPM_B_ref;
-float NFactor = 3/11;
+float NFactor = 1500;
 
-float e_A, e_prev_A;
-float inte_A, inte_prev_A;
-float e_B, e_prev_B;
-float inte_B, inte_prev_B;
+float e_A, e_A_, e_A__;
+float e_B, e_B_, e_B__;
+
 int dt;
 
 int PWM_A_val, PWM_B_val;
+int PWM_A_val_, PWM_B_val_;
 int PWM_min = 150;
 int PWM_max = 255;
 
 char msg[60];
-int ratio_ruedas = 34.02;
 //***Motor Driver Functions*****
 
 int CheckPWM(int PWM_val)
@@ -222,7 +221,7 @@ void stringSplitter(char *msg, float *left_rpm, float *right_rpm) {
   }
 }
 
-float sign(int x) {
+int sign(int x) {
   if (x > 0) {
     return 1;
   } else if (x < 0) {
@@ -262,14 +261,25 @@ void loop() {
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
       dt = (t - t_prev)/1000; // [s]
-      RPM_A = (ThetaA - ThetaA_prev)/ dt * NFactor * 60;
-      RPM_B = (ThetaB - ThetaB_prev)/ dt * NFactor * 60;
+      RPM_A = (ThetaA - ThetaA_prev)/ dt * NFactor * 60 / NFactor;
+      RPM_B = (ThetaB - ThetaB_prev)/ dt * NFactor * 60 / NFactor;
+      e_A__ = e_A_;
+      e_B__ = e_B_;
+      e_A_ = e_A;
+      e_B_ = e_B;
       e_A = RPM_A_ref - RPM_A;
       e_B = RPM_B_ref - RPM_B;
-      inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
-      inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
-      PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
-      PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
+      PWM_A_val = PWM_A_val;
+      PWM_B_val = PWM_B_val;
+
+      PWM_A_val = int(PWM_A_val_
+                      + (kp_A + dt*ki_A + kd_A/dt) * e_A
+                      + (-kp_A - 2*kd_A/dt) * e_A_
+                      + (kd_A/dt) * e_A__);
+      PWM_B_val = int(PWM_B_val_
+                      + (kp_B + dt*ki_B + kd_B/dt) * e_B
+                      + (-kp_B - 2*kd_B/dt) * e_B_
+                      + (kd_B/dt) * e_B__);
       PWM_A_val = CheckPWM(PWM_A_val);
       PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
