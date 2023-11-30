@@ -36,7 +36,7 @@ float kp_B = 0.02;
 float ki_B = 0.00015 ;
 float kd_B = 0;
 
-unsigned long t;
+unsigned long t = 0;
 unsigned long t_prev = 0;
 
 volatile long EncoderCountA = 0;
@@ -241,15 +241,6 @@ void setup() {
   pinMode(BIN1, OUTPUT);
   pinMode(BIN2, OUTPUT);
 
-  cli();
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCNT1 = 0;
-  OCR1A = 12499; //Prescaler = 64
-  TCCR1B |= (1 << WGM12);
-  TCCR1B |= (1 << CS11 | 1 << CS10);
-  TIMSK1 |= (1 << OCIE1A);
-  sei();
 }
 
 void loop() {
@@ -258,7 +249,7 @@ void loop() {
     stringSplitter(msg, &RPM_d_A, &RPM_d_B);
     msg[0] == '\0';
   }
-  if (count > count_prev) {
+  if ((millis() - t_prev)>= 100) {
     t = millis();
     ThetaA = EncoderCountA / 374.22;
     ThetaB = EncoderCountB / 374.22;
@@ -287,10 +278,10 @@ void loop() {
       V_B = Vmin;
       inte_B = inte_prev_B;
     }
-    analogWrite(ENB, 250);
+    WriteDriverVoltageB(V_B, Vmax);
     WriteDriverVoltageA(V_A, Vmax);
 
-    Serial.print(count * 0.05);
+    Serial.print(t);
     Serial.print(", ");
     Serial.print("refA: ");
     Serial.print(RPM_d_A);
@@ -310,17 +301,10 @@ void loop() {
 
     ThetaA_prev = ThetaA;
     ThetaB_prev = ThetaB;
-    count_prev = count;
     t_prev = t;
     inte_prev_A = inte_A;
     inte_prev_B = inte_B;
     e_prev_A = e_A;
     e_prev_B = e_B;
   }
-}
-
-ISR(TIMER1_COMPA_vect) {
-  count++;
-  /*Serial.print(count * 0.05);
-  Serial.print(": ");*/
 }
