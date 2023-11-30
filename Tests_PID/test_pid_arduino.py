@@ -11,7 +11,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_L = 'COM4' #'/dev/ttyACM0'  # Change this to your actual target
+        self.target_L = '/dev/ttyACM0'  #'COM4' # Change this to your actual target
         self.baud = 9600
         self.data = ''
 
@@ -91,7 +91,7 @@ try:
                 start_time = current_time  # Reset the start time
 
                 if sendIt:
-                    coms.comunicacion(f"{v_ref} ,{v_ref}")
+                    coms.comunicacion(f"{60} ,{60}")
 
                 # Toggle the flag for the next iteration
                 sendIt = not sendIt

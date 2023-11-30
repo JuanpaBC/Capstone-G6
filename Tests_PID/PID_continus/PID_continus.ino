@@ -1,6 +1,5 @@
 #include <Servo.h> //Imports the library Servo
 //GeeKee CeeBee
-#define ServoPin 8
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
 
@@ -51,8 +50,9 @@ unsigned long count_prev = 0;
 float ThetaA, ThetaB;
 float ThetaA_prev, ThetaB_prev;
 float RPM_A, RPM_B;
-float RPM_A_ref, RPM_B_ref;
-float NFactor = 3/11;
+float RPM_A_ref ;
+float RPM_B_ref;
+float NFactor = 1500;
 
 float e_A, e_prev_A;
 float inte_A, inte_prev_A;
@@ -222,7 +222,7 @@ void stringSplitter(char *msg, float *left_rpm, float *right_rpm) {
   }
 }
 
-float sign(int x) {
+int sign(int x) {
   if (x > 0) {
     return 1;
   } else if (x < 0) {
@@ -261,9 +261,9 @@ void loop() {
       t = millis();
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
-      dt = (t - t_prev)/1000; // [s]
-      RPM_A = (ThetaA - ThetaA_prev)/ dt * NFactor * 60;
-      RPM_B = (ThetaB - ThetaB_prev)/ dt * NFactor * 60;
+      dt = t - t_prev; // [s]
+      RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
+      RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
       e_A = RPM_A_ref - RPM_A;
       e_B = RPM_B_ref - RPM_B;
       inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
@@ -287,8 +287,8 @@ void loop() {
 
       Serial.print("refB: ");
       Serial.print(RPM_B_ref);
-      // Serial.print("EncoderCountB: ");
-      // Serial.print(EncoderCountB);
+      //Serial.print(" | EncoderCountB: ");
+      //Serial.print(EncoderCountB);
       Serial.print(" | RPM_B: ");
       Serial.print(RPM_B);
       Serial.println("");
