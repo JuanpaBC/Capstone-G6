@@ -10,7 +10,7 @@
 #define SCOOPDELAY 15
 
 #define ENA 6 // D6
-#define ENB 12
+#define ENB 11
 
 #define AIN1 4 // D4
 #define AIN2 5 // D5
@@ -32,8 +32,8 @@ float ki_A = 0.00015 ;
 float kd_A = 0;
 
 // ************ DEFINITIONS A************
-float kp_B = 0.022;
-float ki_B = 0.00001 ;
+float kp_B = 0.02;
+float ki_B = 0.00015 ;
 float kd_B = 0;
 
 unsigned long t;
@@ -45,8 +45,9 @@ volatile long EncoderCountB = 0;
 
 volatile unsigned long count = 0;
 unsigned long count_prev = 0;
-
-float ThetaA, ThetaB, RPM_A, RPM_B, RPM_d_A, RPM_d_B;
+float RPM_d_B = 200;
+float RPM_d_A = 200;
+float ThetaA, ThetaB, RPM_A, RPM_B;
 float ThetaA_prev = 0;
 float ThetaB_prev = 0;
 int dt;
@@ -68,38 +69,39 @@ void WriteDriverVoltageA(float V, float Vmax) {
   if (PWMval > 255) {
     PWMval = 255;
   }
+  Serial.print("A: ");
+  Serial.println(PWMval);
   if (V > 0) {
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
   }
-  else if (V < 0) {
+  else {if (V < 0) {
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-  }
-  else {
+  } else {
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, LOW);
-  }
+  }}
   analogWrite(ENA, PWMval);
 }
 
 
 void WriteDriverVoltageB(float V, float Vmax) {
-  int PWMval = int(255 * abs(V) / Vmax);
-  if (PWMval > 255) {
-    PWMval = 255;
+  int PWMBval = int(255 * abs(V) / Vmax);
+  if (PWMBval > 255) {
+    PWMBval = 255;
   }
   if (V < 0) {
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-  } else if (V > 0) {
+  } else {if (V > 0) {
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
   } else {
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, LOW);
-  }
-  analogWrite(ENB, PWMval);
+  }}
+  analogWrite(ENB, 254);
 }
 
 void ISR_EncoderA2() {
@@ -286,8 +288,8 @@ void loop() {
       inte_B = inte_prev_B;
     }
 
+    WriteDriverVoltageB(V_A, Vmax);
     WriteDriverVoltageA(V_A, Vmax);
-    WriteDriverVoltageB(V_B, Vmax);
 
     Serial.print(count * 0.05);
     Serial.print(", ");
