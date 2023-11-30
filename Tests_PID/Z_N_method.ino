@@ -46,71 +46,69 @@ volatile long EncoderCountB = 0;
 volatile unsigned long count = 0;
 unsigned long count_prev = 0;
 
-float ThetaA, ThetaB, RPM_A, RPM_B, RPM_d_A, RPM_d_B;
+float ThetaA, ThetaB;
+float RPM_A, RPM_B;
+float RPM_A_ref, RPM_B_ref;
 float ThetaA_prev = 0;
 float ThetaB_prev = 0;
 int dt;
-float RPM_max = 230;
 
-float Vmax = 6;
-float Vmin = -6;
-float V_A = 0.1;
-float V_B = 0.1;
+int PWM_A_val, PWM_B_val;
+int PWM_min = 150;
+int PWM_max = 255;
+
 float e_A, e_prev_A = 0, inte_A, inte_prev_A = 0;
 float e_B, e_prev_B = 0, inte_B, inte_prev_B = 0;
 
 char msg[60];
 int ratio_ruedas = 34.02;
+
+
 //***Motor Driver Functions*****
 
-void WriteDriverVoltageA(float V, float Vmax)
+void CheckPWM(int PWM_val)
 {
-    int PWMval = int(255 * abs(V) / Vmax);
-    if (PWMval > 255)
-    {
-        PWMval = 255;
+    if (abs(PWM_val) < PWM_min){
+        return int(PWM_val/abs(PWM_val) * PWM_min)
     }
-    if (V > 0)
-    {
+    if (abs(PWM_val) > PWM_max){
+        return int(PWM_val/abs(PWM_val) * PWM_max)
+    }
+    return PWM_val
+}
+
+void WriteDriverVoltageA(int PWM_val)
+{
+    if (PWM_val > 0){
         digitalWrite(AIN1, HIGH);
         digitalWrite(AIN2, LOW);
     }
-    else if (V < 0)
-    {
+    else if (PWM_val < 0){
         digitalWrite(AIN1, LOW);
         digitalWrite(AIN2, HIGH);
     }
-    else
-    {
+    else{
         digitalWrite(AIN1, LOW);
         digitalWrite(AIN2, LOW);
     }
-    analogWrite(ENA, PWMval);
+    analogWrite(ENA, abs(PWM_val));
 }
 
-void WriteDriverVoltageB(float V, float Vmax)
+void WriteDriverVoltageB(int PWM_val)
 {
-    int PWMval = int(255 * abs(V) / Vmax);
-    if (PWMval > 255)
-    {
-        PWMval = 255;
-    }
-    if (V < 0)
-    {
+    if (PWM_val < 0){
         digitalWrite(BIN1, HIGH);
         digitalWrite(BIN2, LOW);
     }
-    else if (V > 0)
-    {
+    else if (PWM_val > 0){
         digitalWrite(BIN1, LOW);
         digitalWrite(BIN2, HIGH);
     }
-    else
-    {
+    else{
         digitalWrite(BIN1, LOW);
         digitalWrite(BIN2, LOW);
     }
-    analogWrite(ENB, PWMval);
+    analogWrite(ENB, abs(PWM_val));
 }
 
 void ISR_EncoderA2()
@@ -118,85 +116,63 @@ void ISR_EncoderA2()
     bool PinB = digitalRead(AC2);
     bool PinA = digitalRead(AC1);
 
-    if (PinB == LOW)
-    {
-        if (PinA == HIGH)
-        {
+    if (PinB == LOW){
+        if (PinA == HIGH){
             EncoderCountA++;
         }
-        else
-        {
+        else{
             EncoderCountA--;
         }
     }
-
-    else
-    {
-        if (PinA == HIGH)
-        {
+    else{
+        if (PinA == HIGH){
             EncoderCountA--;
         }
-        else
-        {
+        else{
             EncoderCountA++;
         }
     }
 }
-
 void ISR_EncoderA1()
 {
     bool PinB = digitalRead(AC2);
     bool PinA = digitalRead(AC1);
 
-    if (PinA == LOW)
-    {
-        if (PinB == HIGH)
-        {
+    if (PinA == LOW){
+        if (PinB == HIGH){
             EncoderCountA--;
         }
-        else
-        {
+        else{
             EncoderCountA++;
         }
     }
-
-    else
-    {
-        if (PinB == HIGH)
-        {
+    else{
+        if (PinB == HIGH){
             EncoderCountA++;
         }
-        else
-        {
+        else{
             EncoderCountA--;
         }
     }
 }
-
 void ISR_EncoderB2()
 {
     bool PinB = digitalRead(BC2);
     bool PinA = digitalRead(BC1);
 
-    if (PinA == LOW)
-    {
-        if (PinB == HIGH)
-        {
+    if (PinA == LOW){
+        if (PinB == HIGH){
             EncoderCountB++;
         }
-        else
-        {
+        else{
             EncoderCountB--;
         }
     }
-    else
-    {
-        if (PinB == HIGH)
-        {
+    else{
+        if (PinB == HIGH){
             EncoderCountB--;
         }
-        else
-        {
+        else{
             EncoderCountB++;
         }
     }
@@ -206,25 +182,19 @@ void ISR_EncoderB1()
     bool PinB = digitalRead(BC2);
     bool PinA = digitalRead(BC1);
 
-    if (PinA == LOW)
-    {
-        if (PinB == HIGH)
-        {
+    if (PinA == LOW){
+        if (PinB == HIGH){
             EncoderCountB--;
         }
-        else
-        {
+        else{
             EncoderCountB++;
         }
     }
-    else
-    {
-        if (PinB == HIGH)
-        {
+    else{
+        if (PinB == HIGH){
             EncoderCountB++;
         }
-        else
-        {
+        else{
             EncoderCountB--;
         }
     }
@@ -233,12 +203,10 @@ void ISR_EncoderB1()
 void readSerialPort()
 {
     memset(msg, 0, sizeof(msg)); // Clear the msg array
-    if (Serial.available())
-    {
+    if (Serial.available()){
         delay(20);
         int i = 0;
-        while (Serial.available() > 0 && i < sizeof(msg) - 1)
-        {
+        while (Serial.available() > 0 && i < sizeof(msg) - 1){
             msg[i++] = Serial.read();
         }
         Serial.flush();
@@ -318,45 +286,28 @@ void loop()
     if (count > count_prev)
     {
         t = millis();
-        ThetaA = EncoderCountA / 374.22;
-        ThetaB = EncoderCountB / 374.22;
-        dt = (t - t_prev);
-        RPM_A = (ThetaA - ThetaA_prev) / (3.202 * dt / 1000.0) * 60;
-        RPM_B = (ThetaB - ThetaB_prev) / (3.202 * dt / 1000.0) * 60;
-        e_A = RPM_d_A - RPM_A;
-        e_B = RPM_d_B - RPM_B;
+        ThetaA = EncoderCountA;
+        ThetaB = EncoderCountB;
+        dt = (t - t_prev)/1000; // [s]
+        RPM_A = (ThetaA - ThetaA_prev)/11 / (3 * dt) * 60;
+        RPM_B = (ThetaB - ThetaB_prev)/11 / (3 * dt) * 60;
+        e_A = RPM_A_ref - RPM_A;
+        e_B = RPM_B_ref - RPM_B;
         inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
         inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
-        V_A = kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt);
-        V_B = kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt);
-        if (V_A > Vmax)
-        {
-            V_A = Vmax;
-            inte_A = inte_prev_A;
-        }
-        if (V_A < Vmin)
-        {
-            V_A = Vmin;
-            inte_A = inte_prev_A;
-        }
-        if (V_B > Vmax)
-        {
-            V_B = Vmax;
-            inte_B = inte_prev_B;
-        }
-        if (V_B < Vmin)
-        {
-            V_B = Vmin;
-            inte_B = inte_prev_B;
-        }
-
-        WriteDriverVoltageA(0, Vmax);
-        WriteDriverVoltageB(V_B, Vmax);
+        PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
+        PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
+        PWM_A_val = CheckPWM(PWM_A_val);
+        PWM_B_val = CheckPWM(PWM_B_val);
+        inte_A = inte_prev_A;
+        inte_B = inte_prev_B;
+        WriteDriverVoltageA(PWM_A_val);
+        WriteDriverVoltageB(PWM_B_val);
 
         Serial.print(count * 0.05);
         Serial.print(", ");
         Serial.print("refA: ");
-        Serial.print(RPM_d_A);
+        Serial.print(RPM_A_ref);
         // Serial.print("EncoderCountA: ");
         // Serial.print(EncoderCountA);
         Serial.print(" | RPMA: ");
@@ -364,7 +315,7 @@ void loop()
         Serial.print(", ");
 
         Serial.print("refB: ");
-        Serial.print(RPM_d_B);
+        Serial.print(RPM_B_ref);
         // Serial.print("EncoderCountB: ");
         // Serial.print(EncoderCountB);
         Serial.print(" | RPM_B: ");
