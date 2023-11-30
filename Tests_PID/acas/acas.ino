@@ -1,6 +1,6 @@
-//#include <Servo.h> //Imports the library Servo
+#include <Servo.h> //Imports the library Servo
 //GeeKee CeeBee
-
+#define ServoPin 8
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
 
@@ -26,6 +26,8 @@
 
 #define pi 3.1416
 
+Servo servo; //Defines the object Servo of type(class) Servo
+int angle = 0; // Defines an integer
 // ************ DEFINITIONS A************
 float kp_A = 0.02;
 float ki_A = 0.00015 ;
@@ -240,6 +242,8 @@ void setup() {
   pinMode(AIN2, OUTPUT);
   pinMode(BIN1, OUTPUT);
   pinMode(BIN2, OUTPUT);
+  servo.attach(ServoPin); // States that the servo is attached to pin 5
+  servo.write(angle);
 
 }
 
