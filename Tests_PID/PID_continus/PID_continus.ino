@@ -23,50 +23,52 @@
 
 #define baud 9600
 
-#define pi 3.1416
+#define pi 3.1415
 
 Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
+
 // ************ DEFINITIONS A************
 float kp_A = 1.8;
 float ki_A = 0.001;
 float kd_A = 0.005;
-
-// ************ DEFINITIONS A************
+volatile long EncoderCountA = 0;
+float ThetaA_prev, ThetaB_prev;
+float RPM_A, RPM_A_ref;
+float vel_A;
+float e_A, e_prev_A;
+float inte_A, inte_prev_A;
+int PWM_A_val;
+float Dist_A;
+// ************ DEFINITIONS B************
 float kp_B = 2;
 float ki_B = 0.0015 ;
 float kd_B = 0.001;
-
-unsigned long t = 0;
-unsigned long t_prev = 0;
-
-volatile long EncoderCountA = 0;
 volatile long EncoderCountB = 0;
-//--------------------------- Pines---------------------------
-
-volatile unsigned long count = 0;
-unsigned long count_prev = 0;
-
 float ThetaA, ThetaB;
-float ThetaA_prev, ThetaB_prev;
-float RPM_A, RPM_B;
-float RPM_A_ref;
-float RPM_B_ref;
-float NFactor = 1500;
-
-float e_A, e_prev_A;
-float inte_A, inte_prev_A;
+float RPM_B, RPM_B_ref;
+float vel_B;
 float e_B, e_prev_B;
 float inte_B, inte_prev_B;
+int PWM_B_val;
+float Dist_B;
+
+
+float Pos_x, Pos_y;
+float Vel_lin, Vel_x, Vel_y;
+float Vel_ang, Theta;
+
+unsigned long t, t_prev;
 int dt;
 
-int PWM_A_val, PWM_B_val;
+float NFactor = 1500;
 int PWM_min = 150;
 int PWM_max = 255;
 
 char msg[60];
-int ratio_ruedas = 34.02;
-//***Motor Driver Functions*****
+float Diam_ruedas = 65/1000;
+float R_ruedas = Diam_ruedas/2;
+float L_robot = (320-26)/2;
 
 int CheckPWM(int PWM_val)
 {
@@ -261,7 +263,9 @@ void loop() {
       t = millis();
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
-      dt = t - t_prev; // [s]
+      Dist_A = Dist_A + ((ThetaA - ThetaA_prev)) / NFactor * pi * Diam_ruedas;
+      Dist_B = Dist_B + ((ThetaB - ThetaB_prev)) / NFactor * pi * Diam_ruedas;
+      dt = t - t_prev;
       RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
       RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
       e_A = RPM_A_ref - RPM_A;
@@ -270,10 +274,20 @@ void loop() {
       inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
       PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
       PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
-      //PWM_A_val = CheckPWM(PWM_A_val);
-      //PWM_B_val = CheckPWM(PWM_B_val);
+      PWM_A_val = CheckPWM(PWM_A_val);
+      PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
+
+      vel_A = RPM_A * pi * Diam_ruedas / 60;
+      vel_B = RPM_B * pi * Diam_ruedas / 60;
+      Vel_ang = R_ruedas * (vel_B - vel_A) / L_robot;
+      Theta = Theta + Vel_ang*dt/1000;
+      Vel_lin = R_ruedas * (vel_A + vel_B) / 2;
+      Vel_x = Vel_lin * cos(Theta);
+      Vel_y = Vel_lin * sin(Theta);
+      Pos_x = Pos_x + Vel_x*dt/1000;
+      Pos_y = Pos_y + Vel_y*dt/1000;
 
       Serial.print(t);
       Serial.print(", ");
@@ -297,7 +311,6 @@ void loop() {
       inte_B = inte_prev_B;
       ThetaA_prev = ThetaA;
       ThetaB_prev = ThetaB;
-      count_prev = count;
       t_prev = t;
       inte_prev_A = inte_A;
       inte_prev_B = inte_B;
