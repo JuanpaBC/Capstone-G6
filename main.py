@@ -40,7 +40,7 @@ class NutsTracker:
                 predictions = self.model(frame)
                 for result in predictions:
                     result_bboxes = result.boxes
-                    print(result)
+                    #print(result)
                     for result_bbox in result_bboxes:
                         b_coordinates = result_bbox.xyxy[0]
                         too_much_overlap = False
@@ -75,6 +75,7 @@ class NutsTracker:
                                     # Display the resulting frame with predictions
             if self.show:
                 cv2.imshow('Object Detection', frame)
+                cv2.waitKey(1)
     def stop_tracking(self):
         self.tracking = False
 
@@ -88,14 +89,14 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM4"
+        self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
 
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
@@ -108,14 +109,14 @@ class Communication:
                     message = self.arduino.readline().decode('utf-8').strip()
                     if message:
                         self.data = message
-                        print(f'Recibiendo mensaje: {message}')
+                        #print(f'Recibiendo mensaje: {message}')
                         self.arduino.flush()
             except Exception as e:
                 print(f"Error reading message: {e}")
 
     def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
-        print(f'Enviando mensaje {mensaje}')
+        #print(f'Enviando mensaje {mensaje}')
         if self.arduino.isOpen():
             self.arduino.flush()
             self.arduino.write(mensaje.encode('utf-8'))
@@ -202,8 +203,8 @@ class Pid:
             self.C_lin = 0
             self.motor_L = self.check_limit(self.C_lin + self.C_ang)
             self.motor_R = self.check_limit(self.C_lin - self.C_ang)
-        print("vel_lin", self.C_lin, "  vel_ang", self.C_ang,
-              "  mR", self.motor_R, "  mL", self.motor_L)
+        #print("vel_lin", self.C_lin, "  vel_ang", self.C_ang,
+              #"  mR", self.motor_R, "  mL", self.motor_L)
 
     def check_limit(self, vel):
         if abs(vel) < self.min_vel:
