@@ -70,6 +70,12 @@ float Diam_ruedas = 65/1000;
 float R_ruedas = Diam_ruedas/2;
 float L_robot = (320-26)/2;
 
+int explorer_mode = 1;
+int instruction = -1;
+int largo = 3000;
+int advance = 0;
+int state = 0;
+
 int CheckPWM(int PWM_val)
 {
     if (abs(PWM_val) < PWM_min){
@@ -208,15 +214,26 @@ void readSerialPort()
   }
 }
 
-void stringSplitter(char *msg, float *left_rpm, float *right_rpm) {
+void stringSplitter(char *msg, int *instruction, float *left_rpm, float *right_rpm) {
   char *token = strtok(msg, ",");
   for (int i = 0; i < 2; i++) {
-    float floatValue = atof(token); // Use atof for floating-point values
+    int intValue = 0;
+    float floatValue = 0.0;
+    if(i == 0){
+      intValue = atoi(token);
+    }
+    else{
+      floatValue = atof(token); // Use atof for floating-point values
+    }
+    if(*instruction == 1) break;
     switch (i) {
       case 0:
-        *left_rpm = floatValue;
+        *instruction = intValue;
         break;
       case 1:
+        *left_rpm = floatValue;
+        break;
+      case 2:
         *right_rpm = floatValue;
         break;
     }
@@ -256,8 +273,101 @@ void setup() {
 void loop() {
   readSerialPort();
   if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-    stringSplitter(msg, &RPM_A_ref, &RPM_B_ref);
+    stringSplitter(msg, &instruction, &RPM_A_ref, &RPM_B_ref);
     msg[0] == '\0';
+  }
+  if(instruction == 0){
+    explorer_mode = 0;
+  }
+  else if(instruction == 1){
+    explorer_mode = 1;
+  }
+  if(explorer_mode  == 1){
+    Serial.println((Dist_A+Dist_B)/2);
+    if(state == 0){
+      RPM_A_ref = 200;
+      RPM_B_ref = 200;
+      if ((Dist_A+Dist_B)/2 >= largo){
+        state = 1;
+      }
+    }
+    else if(state == 1){
+      RPM_A_ref = 0;
+      RPM_B_ref = 0;
+    }
+    /*else if(state == 1){
+      RPM_A_ref = 200;
+      RPM_B_ref = 0;
+      if (Dist_A >= 2*largo){
+        state = 2;
+      }
+    }
+    else if(sstate == 2){
+      RPM_A_ref = 0;
+      RPM_B_ref = 0;
+      if (Dist_A >= 3*largo){
+        state = 3;
+      }
+    }
+    else if(state == 3){
+      RPM_A_ref = -100;
+      RPM_B_ref = -100;
+      if (Dist_A >= 4*largo){
+        state = 4;
+      }
+    }
+    else if(state == 4){
+      RPM_A_ref = 0;
+      RPM_B_ref = 0;
+      if (Dist_A >= 5*largo){
+        state = 5;
+      }
+    }
+    else if(state == 5){
+      RPM_A_ref = 200;
+      RPM_B_ref = 200;
+      if (Dist_A >= 6*largo){
+        state = 6;
+      }
+    }
+    else if(state == 6){
+      RPM_A_ref = 200;
+      RPM_B_ref = 0;
+      if (Dist_A >= 7*largo){
+        state = 7;
+      }
+    }
+    else if(state == 7){
+      RPM_A_ref = 0;
+      RPM_B_ref = 0;
+      if (Dist_A >= 8*largo){
+        state = 8;
+      }
+    }
+    else if(state == 8){
+      RPM_A_ref = -100;
+      RPM_B_ref = -100;
+      if (Dist_A >= 9*largo){
+        state = 9;
+      }
+    }
+    else if(state == 9){
+      RPM_A_ref = 0;
+      RPM_B_ref = 0;
+      if (Dist_A >= 10*largo){
+        state = 10;
+      }
+    }
+    else if(state == 10){
+      RPM_A_ref = 200;
+      RPM_B_ref = 200;
+      if (Dist_A >= 11*largo){
+        state = 11;
+      }
+    }
+    else if(state == 11){
+      RPM_A_ref = 200
+    }*/
   }
   if ((millis() - t_prev)>= 100) {
       t = millis();
@@ -265,6 +375,8 @@ void loop() {
       ThetaB = EncoderCountB;
       Dist_A = Dist_A + ((ThetaA - ThetaA_prev)) / NFactor * pi * Diam_ruedas;
       Dist_B = Dist_B + ((ThetaB - ThetaB_prev)) / NFactor * pi * Diam_ruedas;
+      Serial.println(Dist_A);
+      Serial.println(Dist_B);
       dt = t - t_prev;
       RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
       RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
@@ -307,8 +419,6 @@ void loop() {
       Serial.print(RPM_B);
       Serial.println("");
 
-      inte_A = inte_prev_A;
-      inte_B = inte_prev_B;
       ThetaA_prev = ThetaA;
       ThetaB_prev = ThetaB;
       t_prev = t;
