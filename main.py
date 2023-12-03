@@ -123,11 +123,6 @@ class Communication:
             time.sleep(0.1)
 
 
-def track_wrapper(tracker):
-    # This function is used to run the track() method in a separate thread.
-    tracker.track()
-
-
 class Pid:
     def __init__(self):
         self.Ts = 0.2  # time sample
@@ -218,89 +213,100 @@ class Pid:
         return "0, " + str(int(right)) +","+ str(int(left)) + "\n"
 
 
-tracker = NutsTracker()
-tracker.initiateVideo()
+class Brain:
 
-coms = Communication()
-coms.begin()
+    def __init__(self, tracker, coms, pid) -> None:
+        self.tracker = tracker
+        self.coms = coms
+        self.pid = pid
+        self.tracking_thread = threading.Thread(target=self.track_wrapper, args=(self,))
+        self.tracking_thread.daemon = True
+        self.read_messages_thread = threading.Thread(target=self.coms.read_and_print_messages)
+        self.read_messages_thread.daemon = True
+        self.begin()
 
-control = Pid()
+    def begin(self):
+        self.tracker.initiateVideo()
+        self.coms.begin()
+        self.tracking_thread.start()
+        self.read_messages_thread.start()
+    
+    def track_wrapper(self):
+        # This function is used to run the track() method in a separate thread.
+        self.tracker.track()
+
+    def do(self):
+        running = True
+        sendIt = True
+
+        RPMA_values = []
+        RPMB_values = []
+        RPMref_values = []
 
 
-tracking_thread = threading.Thread(target=track_wrapper, args=(tracker,))
-tracking_thread.daemon = True
-tracking_thread.start()
+        csv_file_path = 'serial_data.csv'
+        csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
+        last_data = ""
+        try:
+            with open(csv_file_path, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile)
+                csv_writer.writerow(csv_header)
+                while running:
+                    if (self.coms.manual_mode):
+                        command = input()
+                        if command == 'a':
+                            self.coms.comunicacion('1,-200,200\n')
+                        elif command == 'd':
+                            # coms.comunicacion('R\n')
+                            self.coms.comunicacion('1,200,-200\n')
+                        elif command == 'w':
+                            # coms.comunicacion('U\n')
+                            self.coms.comunicacion('1,200,200\n')
+                        elif command == 's':
+                            # coms.comunicacion('D\n')
+                            self.coms.comunicacion('1,-200,-200\n')
+                        elif command == 'p':
+                            self.coms.comunicacion('2\n')
+                        elif command == 'q':
+                            self.coms.comunicacion('1,0,0\n')
+                    else:
+                        if self.tracker.distancia != "0":
+                            self.control.make_control(self.tracker.distancia, self.tracker.area)
+                            self.coms.comunicacion(self.control.get_control())
+                        if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
+                            # Extract RPMA, RPMB, RPMref from the updated 'data'
+                            timestamp, aData, bData = self.coms.data.split(',')
+                            aParts = aData.split('|')
+                            BParts = bData.split('|')
+                            ARef = float(aParts[0].split(':')[1])
+                            RPMA = float(aParts[1].split(':')[1])
+                            BRef = float(BParts[0].split(':')[1])
+                            RPMB = float(BParts[1].split(':')[1])
+                            # Save data to listsc
+                            RPMA_values.append(RPMA)
+                            RPMB_values.append(RPMB)
+                            RPMref_values.append(ARef)
+                            # Save data to CSV
+                            csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
+                            last_data = self.coms.data
 
-# Start a separate thread to read and print messages from Arduino
-read_messages_thread = threading.Thread(target=coms.read_and_print_messages)
-read_messages_thread.daemon = True
-read_messages_thread.start()
+                            time.sleep(0.1)
+                    # if keyboard.is_pressed('x'):
+                    #    running = False
+                    #    print("Stopped")
+                    #    coms.comunicacion('0,1,0,1\n')
 
-running = True
-sendIt = True
+        except KeyboardInterrupt:
+            print("Data collection interrupted.")
 
-RPMA_values = []
-RPMB_values = []
-RPMref_values = []
+        finally:
+            self.finish()
+
+    def finish(self):
+        # Close the serial port
+        self.coms.arduino.close()
+        self.tracker.stop_tracking()
+        self.tracker.finish()
 
 
-csv_file_path = 'serial_data.csv'
-csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
-last_data = ""
-try:
-    with open(csv_file_path, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(csv_header)
-        while running:
-            if (coms.manual_mode):
-                command = input()
-                if command == 'a':
-                    coms.comunicacion('1,-200,200\n')
-                elif command == 'd':
-                    # coms.comunicacion('R\n')
-                    coms.comunicacion('1,200,-200\n')
-                elif command == 'w':
-                    # coms.comunicacion('U\n')
-                    coms.comunicacion('1,200,200\n')
-                elif command == 's':
-                    # coms.comunicacion('D\n')
-                    coms.comunicacion('1,-200,-200\n')
-                elif command == 'p':
-                    coms.comunicacion('2\n')
-                elif command == 'q':
-                    coms.comunicacion('1,0,0\n')
-            else:
-                if tracker.distancia != "0":
-                    control.make_control(tracker.distancia, tracker.area)
-                    coms.comunicacion(control.get_control())
-                if(len(coms.data.split(','))>=3 and coms.data != last_data):
-                    # Extract RPMA, RPMB, RPMref from the updated 'data'
-                    timestamp, aData, bData = coms.data.split(',')
-                    aParts = aData.split('|')
-                    BParts = bData.split('|')
-                    ARef = float(aParts[0].split(':')[1])
-                    RPMA = float(aParts[1].split(':')[1])
-                    BRef = float(BParts[0].split(':')[1])
-                    RPMB = float(BParts[1].split(':')[1])
-                    # Save data to listsc
-                    RPMA_values.append(RPMA)
-                    RPMB_values.append(RPMB)
-                    RPMref_values.append(ARef)
-                    # Save data to CSV
-                    csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
-                    last_data = coms.data
-
-                    time.sleep(0.1)
-            # if keyboard.is_pressed('x'):
-            #    running = False
-            #    print("Stopped")
-            #    coms.comunicacion('0,1,0,1\n')
-
-except KeyboardInterrupt:
-    print("Data collection interrupted.")
-
-finally:
-    # Close the serial port
-    coms.arduino.close()
-    tracker.stop_tracking()
-    tracker.finish()
+brain = Brain(NutsTracker(), Communication(), Pid())
