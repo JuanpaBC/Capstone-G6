@@ -66,7 +66,7 @@ int PWM_min = 150;
 int PWM_max = 255;
 
 char msg[60];
-float Diam_ruedas = 65/1000;
+float Diam_ruedas = 0.065;
 float R_ruedas = Diam_ruedas/2;
 float L_robot = (320-26)/2;
 
@@ -261,6 +261,14 @@ void loop() {
   }
   if ((millis() - t_prev)>= 100) {
       t = millis();
+
+      if (Pos_y < 1){
+        RPM_A_ref = 200;
+        RPM_B_ref = -200;
+      } else {
+        RPM_A_ref = 0;
+        RPM_B_ref = 0;
+      }
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
       Dist_A = Dist_A + ((ThetaA - ThetaA_prev)) / NFactor * pi * Diam_ruedas;
@@ -279,15 +287,15 @@ void loop() {
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
 
-      vel_A = RPM_A * pi * Diam_ruedas / 60;
-      vel_B = RPM_B * pi * Diam_ruedas / 60;
+      vel_A = RPM_A * pi * 2 / 60.0;
+      vel_B = RPM_B * pi * 2 / 60.0;
       Vel_ang = R_ruedas * (vel_B - vel_A) / L_robot;
       Theta = Theta + Vel_ang*dt/1000;
       Vel_lin = R_ruedas * (vel_A + vel_B) / 2;
       Vel_x = Vel_lin * cos(Theta);
       Vel_y = Vel_lin * sin(Theta);
-      Pos_x = Pos_x + Vel_x*dt/1000;
-      Pos_y = Pos_y + Vel_y*dt/1000;
+      Pos_x = Pos_x + (Vel_x*dt)/1000;
+      Pos_y = Pos_y + (Vel_y*dt)/1000;
 
       Serial.print(t);
       Serial.print(", ");
@@ -307,8 +315,14 @@ void loop() {
       Serial.print(RPM_B);
       Serial.println("");
 
-      inte_A = inte_prev_A;
-      inte_B = inte_prev_B;
+      Serial.print("POSX: ");
+      Serial.print(Pos_x);
+      Serial.print("POSY: ");
+      Serial.print(Pos_y);
+      Serial.print("Theta");
+      Serial.println(Theta);
+
+      
       ThetaA_prev = ThetaA;
       ThetaB_prev = ThetaB;
       t_prev = t;
