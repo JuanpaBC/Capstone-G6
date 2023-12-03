@@ -73,7 +73,8 @@ class NutsTracker:
                                     label = "castana"
                                     frame = cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                                     # Display the resulting frame with predictions
-                                    cv2.imshow('Object Detection', frame)
+            if self.show:
+                cv2.imshow('Object Detection', frame)
     def stop_tracking(self):
         self.tracking = False
 
@@ -90,6 +91,8 @@ class Communication:
         self.target_W = "COM4"
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
+        self.data = ''
+
 
     def begin(self):
         self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
@@ -211,11 +214,10 @@ class Pid:
 
     def get_control(self):
         right, left = [self.motor_R, self.motor_L]
-        return str(int(min(abs(right), 250))) + "," + str(int(np.sign(right))) + "," + str(int(min(abs(left), 250))) + "," + str(int(np.sign(left)))
+        return "0, " + str(int(right)) +","+ str(int(left)) + "\n"
 
 
 tracker = NutsTracker()
-tracker.colorSetup()
 tracker.initiateVideo()
 
 coms = Communication()
@@ -243,7 +245,7 @@ RPMref_values = []
 
 csv_file_path = 'serial_data.csv'
 csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
-
+last_data = ""
 try:
     with open(csv_file_path, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
@@ -270,8 +272,6 @@ try:
                 if tracker.distancia != "0":
                     control.make_control(tracker.distancia, tracker.area)
                     coms.comunicacion(control.get_control())
-                else:
-                    coms.comunicacion('0,0,0,0\n')   
                 if(len(coms.data.split(','))>=3 and coms.data != last_data):
                     # Extract RPMA, RPMB, RPMref from the updated 'data'
                     timestamp, aData, bData = coms.data.split(',')
@@ -289,9 +289,7 @@ try:
                     csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
                     last_data = coms.data
 
-                    time.sleep(0.1) 
-                else:
-                    print("wtf")
+                    time.sleep(0.1)
             # if keyboard.is_pressed('x'):
             #    running = False
             #    print("Stopped")

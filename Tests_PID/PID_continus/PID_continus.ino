@@ -6,7 +6,7 @@
 #define ServoPin 8 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
-#define SCOOPDELAY 5
+#define SCOOPDELAY 1
 
 #define ENA 6 // D6
 #define ENB 11
@@ -99,18 +99,19 @@ void checkDistance()
   distance = duration * 0.034 / 2;
 
   // Print the distance on the Serial Monitor (Ctrl+Shift+M):
-  Serial.print("Distance = ");
-  Serial.print(distance);
-  Serial.println(" cm");
+  // Serial.print("Distance = ");
+  // Serial.print(distance);
+  // Serial.println(" cm");
 }
 
 void scoop() {
     // The following loop runs until the servo is turned to 180 degrees
-    Serial.println("scooping");
+    // Serial.println("scooping");
     if(scooping == 1){
       currentMillis = millis();
       if (currentMillis - startScoop >= SCOOPDELAY) {
           servo.write(angle);
+          angle++;
           angle++;
           startScoop = currentMillis;
       }
@@ -122,6 +123,7 @@ void scoop() {
       currentMillis = millis();
       if (currentMillis - startScoop >= SCOOPDELAY) {
           servo.write(angle);
+          angle--;
           angle--;
           startScoop = currentMillis;
       }
