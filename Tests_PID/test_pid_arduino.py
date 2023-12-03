@@ -69,14 +69,20 @@ duration = 1  # Duration in seconds for each set of messages
 
 start_time = time.time()
 
+
+
+
 # CSV file configuration
 csv_file_path = 'serial_data.csv'
-csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
+csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref','EncoderA','EncoderB']
 
 RPMref_values = [50,100,150,200]
 # External variables
 RPMA_values = []
 RPMB_values = []
+EncoderA_values = []  # New list for EncoderA values
+EncoderB_values = []  # New list for EncoderB values
+
 v_ref = str(250)
 i = 0
 try:
@@ -99,22 +105,25 @@ try:
                 # Toggle the flag for the next iteration
                 sendIt = not sendIt
             if(len(coms.data.split(','))>=3 and coms.data != last_data):
-                # Extract RPMA, RPMB, RPMref from the updated 'data'
+                # Extract RPMA, RPMB, RPMref, EncoderA, EncoderB from the updated 'data'
                 timestamp, aData, bData = coms.data.split(',')
                 aParts = aData.split('|')
                 BParts = bData.split('|')
                 ARef = float(aParts[0].split(':')[1])
-                RPMA = float(aParts[1].split(':')[1])
+                EncoderA= float(aParts[1].split(':')[1])
+                RPMA = float(aParts[2].split(':')[1])  # Assuming EncoderA is the third part of aData
                 BRef = float(BParts[0].split(':')[1])
-                RPMB = float(BParts[1].split(':')[1])
-                # Save data to listsc
+                EncoderB = float(BParts[1].split(':')[1])
+                RPMB = float(BParts[2].split(':')[1])  # Assuming EncoderB is the third part of bData
+                # Save data to lists
                 RPMA_values.append(RPMA)
                 RPMB_values.append(RPMB)
+                EncoderA_values.append(EncoderA)  # Save EncoderA value
+                EncoderB_values.append(EncoderB)  # Save EncoderB value
                 RPMref_values.append(ARef)
                 # Save data to CSV
-                csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
+                csv_writer.writerow([timestamp, RPMA, RPMB, ARef, BRef, EncoderA, EncoderB])
                 last_data = coms.data
-
                 time.sleep(0.1)  # Adjust sleep time based on your application
 
 except KeyboardInterrupt:
@@ -130,5 +139,13 @@ plt.plot(RPMB_values, label='RPMB')
 plt.plot(RPMref_values, label='RPMref')
 plt.xlabel('Time (s)')
 plt.ylabel('RPM')
+plt.legend()
+plt.show()
+
+plt.plot(EncoderA_values, label='EncoderA')  # Plot EncoderA values
+plt.plot(EncoderB_values, label='EncoderB')  # Plot EncoderB values
+
+plt.xlabel('Time (s)')
+plt.ylabel('Encoders')
 plt.legend()
 plt.show()
