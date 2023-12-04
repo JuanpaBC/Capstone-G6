@@ -134,18 +134,18 @@ finally:
     coms.arduino.close()
 
 # Plot the results
-plt.plot(RPMA_values, label='RPMA')
-plt.plot(RPMB_values, label='RPMB')
-plt.plot(RPMref_values, label='RPMref')
-plt.xlabel('Time (s)')
-plt.ylabel('RPM')
-plt.legend()
-plt.show()
+# plt.plot(RPMA_values, label='RPMA')
+# plt.plot(RPMB_values, label='RPMB')
+# plt.plot(RPMref_values, label='RPMref')
+# plt.xlabel('Time (s)')
+# plt.ylabel('RPM')
+# plt.legend()
+# plt.show()
 
-plt.plot(EncoderA_values, label='EncoderA')  # Plot EncoderA values
-plt.plot(EncoderB_values, label='EncoderB')  # Plot EncoderB values
+# plt.plot(EncoderA_values, label='EncoderA')  # Plot EncoderA values
+# plt.plot(EncoderB_values, label='EncoderB')  # Plot EncoderB values
 
-plt.xlabel('Time (s)')
-plt.ylabel('Encoders')
-plt.legend()
-plt.show()
+# plt.xlabel('Time (s)')
+# plt.ylabel('Encoders')
+# plt.legend()
+# plt.show()
