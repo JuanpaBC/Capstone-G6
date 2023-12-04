@@ -75,7 +75,7 @@ void Avanzar(int pwm_ref)
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, 50);
+    analogWrite(ENB, 255);
 }
 
 // ************** Función para parar ***************
@@ -279,9 +279,9 @@ void loop()
         if ((micros() - ref_time) * 0.000001 > 5)
         {
             state = 2;
-            digitalWrite(BIN1, LOW);
-            digitalWrite(BIN2, HIGH);
-            analogWrite(ENB, 250);
+            digitalWrite(AIN1, LOW);
+            digitalWrite(AIN2, HIGH);
+            analogWrite(ENA, 250);
         }
         break;
 
@@ -353,9 +353,9 @@ void loop()
         }
         if ((micros()) * 0.000001 > 5)
         {
-          digitalWrite(BIN1, LOW);
-          digitalWrite(BIN2, HIGH);
-          analogWrite(ENB, 50);
+          digitalWrite(AIN1, HIGH);
+          digitalWrite(AIN2, LOW);
+          analogWrite(ENA, 50);
           state = 0;
           digitalWrite(redLed, LOW);
         }
