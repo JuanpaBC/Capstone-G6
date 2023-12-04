@@ -26,7 +26,7 @@ class NutsTracker:
         self.detect = False
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
         ret, frame = self.cap.read()
         self.y_max, self.x_max, _ = frame.shape
 
@@ -220,7 +220,7 @@ class Brain:
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()
-        self.control = PID(0.5, 0.0, 0.0, round(
+        self.control = PID(0.9, 0.0, 0.0, round(
             self.tracker.x_max/2), round(self.tracker.y_max/2))
         
 
