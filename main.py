@@ -10,14 +10,18 @@ from torchvision import transforms
 from ultralytics import YOLO
 import csv
 
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter('output.avi', fourcc, 1.0, (640, 480))  # Adjust fps and frame size
+
 class NutsTracker:
     def __init__(self, model):
+        self.record = False
         self.cap = None
         self.image = None
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = False
+        self.show = True
         self.x = -1
         self.y = -1
         self.x_max = 0
@@ -26,15 +30,17 @@ class NutsTracker:
         self.detect = False
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(2)
         ret, frame = self.cap.read()
+        while (not ret):
+            print(ret,frame)
+            ret, frame = self.cap.read()
         self.y_max, self.x_max, _ = frame.shape
 
     def track(self):
         while self.tracking:
             # Capture frame-by-frame
             ret, frame = self.cap.read()
-
             # Make predictions
             with torch.no_grad():
                 predictions = self.model(frame)
@@ -47,39 +53,58 @@ class NutsTracker:
                         too_much_overlap = False
                         b_center = result_bbox.xywh[0]  # get box coordinates in (top, left, bottom, right) format
                         box = b_coordinates[:4].int().tolist()
-                        for other in result_bboxes:
-                            o_coordinates = other.xyxy[0]
-                            if (b_coordinates.cpu().numpy() == o_coordinates.cpu().numpy()).all():
-                                continue
+                        #for other in result_bboxes:
+                        #    o_coordinates = other.xyxy[0]
+                        #    if (b_coordinates.cpu().numpy() == o_coordinates.cpu().numpy()).all():
+                        #        continue
                             # Calculate the intersection coordinates
-                            x1 = max(b_coordinates[0].cpu().numpy(), o_coordinates[0].cpu().numpy())
-                            y1 = max(b_coordinates[1].cpu().numpy(), o_coordinates[1].cpu().numpy())
-                            x2 = min(b_coordinates[2].cpu().numpy(), o_coordinates[2].cpu().numpy())
-                            y2 = min(b_coordinates[3].cpu().numpy(), o_coordinates[3].cpu().numpy())
+                        #    x1 = max(b_coordinates[0].cpu().numpy(), o_coordinates[0].cpu().numpy())
+                        #    y1 = max(b_coordinates[1].cpu().numpy(), o_coordinates[1].cpu().numpy())
+                        #    x2 = min(b_coordinates[2].cpu().numpy(), o_coordinates[2].cpu().numpy())
+                        #    y2 = min(b_coordinates[3].cpu().numpy(), o_coordinates[3].cpu().numpy())
 
                             # Calculate area of intersection
-                            intersection_area = max(0, x2 - x1) * max(0, y2 - y1)
-                            b_area = b_center[2].cpu().numpy() * b_center[3].cpu().numpy()
-                            if intersection_area / b_area > 0.5:
-                                too_much_overlap = True
-                                break
+                        #    intersection_area = max(0, x2 - x1) * max(0, y2 - y1)
+                        #    b_area = b_center[2].cpu().numpy() * b_center[3].cpu().numpy()
+                        #    if intersection_area / b_area > 0.5:
+                        #        too_much_overlap = True
+                        #        break
                         if not too_much_overlap:
                             confidence = result_bbox.conf
-                            if confidence[0].cpu().numpy() > 0.5:
+                            if confidence[0].cpu().numpy() > 0:
                                 a = True
                                 self.x, self.y, w, h = b_center.cpu().numpy()
                                 self.x = int(self.x)
                                 self.y = int(self.y)
-                                if self.show:
+                                if(self.record or self.show):
                                     frame = cv2.circle(frame, (int(b_center[0].cpu().numpy()), int(b_center[1].cpu().numpy())), 5, (0, 0, 255), -1)
                                     frame = cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
                                     label = "castana"
                                     frame = cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                                    # Display the resulting frame with predictions
+                                break
+                if(self.record):
+                    # draw a triange of angle 7.5 from the midle bottom of the camera
+                    # angle_radians = np.radians(90-7.5)
+                    # direction_vector1 = np.array([np.cos(angle_radians), -np.sin(angle_radians)])
+                    # direction_vector2 = np.array([-np.cos(angle_radians), -np.sin(angle_radians)])
+                    # line_length = min(self.x_max, self.y_max)
+                    # line1_points = intersection_point + line_length * direction_vector1
+                    # line2_points = intersection_point + line_length * direction_vector2
+                    # Convert points to integers
+                    # line1_points = tuple(map(int, line1_points))
+                    # line2_points = tuple(map(int, line2_points))
+                    # print("a")
+                    # print(line1_points, line2_points)
+                    # Draw lines on the frame
+                    frame = cv2.line(frame, (int(self.x_max / 2) - 70, int(self.y_max)), (int(self.x_max / 2) - 70,0), (255, 0, 0), 2)
+                    frame = cv2.line(frame, (int(self.x_max / 2) + 70, int(self.y_max)), (int(self.x_max / 2) + 70,0), (255, 0, 0), 2)
+                    out.write(frame)
                 self.detect = a
             if self.show:
+                frame = cv2.line(frame, (int(self.x_max / 2) - 70, int(self.y_max)), (int(self.x_max / 2) - 70,0), (255, 0, 0), 2)
+                frame = cv2.line(frame, (int(self.x_max / 2) + 70, int(self.y_max)), (int(self.x_max / 2) + 70,0), (255, 0, 0), 2)
                 cv2.imshow('Object Detection', frame)
-                cv2.waitKey(1)
+                cv2.waitKey(1)        
     def stop_tracking(self):
         self.tracking = False
 
@@ -136,33 +161,36 @@ class PID:
         self.integral = 0.0
         self.x_target = x_target
         self.y_target = y_target
+        self.tolangle = 7.5
+        self.tolpixels = 70
         
     def theta_error(self, x, y):
         # Returns the error in the angle theta
-        angle = math.atan2(self.y_target - y, self.x_target - x)*180/math.pi
-        if -7.5 < angle < 7.5:
+        angle = np.sign(x - self.x_target)*math.atan2(self.y_target - y, x - self.x_target)*180/math.pi
+        if -self.tolangle < angle < self.tolangle:
             self.theta_err = 0
         else:
             self.theta_err = angle/abs(angle)
 
     def lineal_error(self, x, y):
         # Returns the error in the lineal distance
-        self.lineal_err = math.sqrt((self.x_target - x)**2 + (self.y_target - y)**2)
+        self.lineal_err = math.sqrt((self.x_target - x)**2 + (self.y_target - y)**2)/2
 
     def err_reference(self, x, y):
         # Returns the reference for the PID
         self.theta_error(x, y)
         self.lineal_error(x, y)
-        if self.theta_err == 0:
-            self.errA = self.lineal_err
-            self.errB = self.lineal_err
+        print(self.theta_err)
+        if self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels):
+            self.errA = self.lineal_err/2
+            self.errB = self.lineal_err/2
         else:
             if self.theta_err > 0:
-                self.errA = self.theta_err * self.lineal_err
-                self.errB = -0.5*self.theta_err * self.lineal_err
+                self.errA = 1.2*self.theta_err * self.lineal_err
+                self.errB = -1*self.theta_err * self.lineal_err
             else:
-                self.errA = -0.5*self.theta_err * self.lineal_err
-                self.errB = self.theta_err * self.lineal_err
+                self.errA = 0.9*self.theta_err * self.lineal_err
+                self.errB = -1.2*self.theta_err * self.lineal_err
 
     def update(self, delta_time, x, y):
         self.err_reference(x, y)
@@ -178,13 +206,19 @@ class PID:
 
         if outputA > 0:
             outputA = min(outputA, 255)
+            outputA = max(outputA, 190)
         elif outputA < 0:
             outputA = max(outputA, -255)
+            outputA = min(outputA, -120)
         if outputB > 0:
             outputB = min(outputB, 255)
+            outputB = max(outputB, 190)
         elif outputB < 0:
             outputB = max(outputB, -255)
-
+            outputB = min(outputB, -120)
+        if self.lineal_err >0 and (self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels)):
+            outputA = max(outputA, 60)
+            outputB = max(outputB, 60)
         return outputA, outputB
 
 
@@ -223,13 +257,17 @@ class Brain:
         self.tracker.initiateVideo()
         self.coms.begin()
         self.tracking_thread.start()
-        self.read_messages_thread.start()
-        self.control = PID(0.9, 0.0, 0.0, round(
-            self.tracker.x_max/2), round(self.tracker.y_max/2))
+        self.read_messages_thread.start()        
+        self.control = PID(0.6, 0.003, 0.01, round(
+            self.tracker.x_max/2), round(self.tracker.y_max))
+        #self.control = PID(0.35, 0.001, 0.008, round(
+        #    self.tracker.x_max/2), round(self.tracker.y_max))
+
         
 
     def do(self):
         running = True
+        i = 0
         #RPMA_values = []
         #RPMB_values = []
         #RPMref_values = []
@@ -271,7 +309,10 @@ class Brain:
                         print(f"OutputA: {outputA}, OutputB: {outputB}")
                         self.coms.comunicacion(f"1,{outputA},{outputB}")
                     else:
-                        self.coms.comunicacion(self.instructions["stop"])
+                        self.control.integral = 0
+                        i = i + 1
+                        if(i>5):
+                            self.coms.comunicacion(self.instructions["stop"])
                     # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
                         # timestamp, aData, bData = self.coms.data.split(',')
@@ -304,6 +345,8 @@ class Brain:
 
     def finish(self):
         # Close the serial port
+        # Release the video writer after the main loop
+        out.release()
         self.coms.arduino.close()
         self.tracker.stop_tracking()
         self.tracker.finish()

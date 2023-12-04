@@ -86,9 +86,6 @@ void checkDistance()
   distance = duration * 0.034 / 2;
 
   // Print the distance on the Serial Monitor (Ctrl+Shift+M):
-  // Serial.print("Distance = ");
-  // Serial.print(distance);
-  // Serial.println(" cm");
 }
 
 void scoop() {
@@ -310,14 +307,9 @@ void setup() {
 }
 
 void loop() {
-  readSerialPort();
-  if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-    stringSplitter(msg, &instruction, &PWM_A_val, &PWM_B_val);
-    msg[0] == '\0';
-  }
   if(scooping == 0){
-    checkDistance();
     if(distance < 9){
+      distance = 12;
       scooping = 1;
       startScoop = millis();
     }
@@ -328,11 +320,19 @@ void loop() {
   }
   
   if(scooping == 3){
-    if(millis()-startScoop >= 1000){
+    if(millis()-startScoop >= 2000){
       scooping = 0;
     }
   }
   if ((millis() - t_prev)>= 100) {
+      readSerialPort();
+      if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
+        stringSplitter(msg, &instruction, &PWM_A_val, &PWM_B_val);
+        msg[0] == '\0';
+      }
+      if(scooping == 0){
+        checkDistance();
+      }
       t = millis();
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
