@@ -6,7 +6,7 @@
 #define ServoPin 8 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
-#define SCOOPDELAY 1
+#define SCOOPDELAY 5
 
 #define ENA 6 // D6
 #define ENB 11
@@ -29,27 +29,17 @@ Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
 
 // ************ DEFINITIONS A************
-float kp_A = 1.55;
-float ki_A = 0.001;
-float kd_A = 0.0005;
 volatile long EncoderCountA = 0;
 float ThetaA_prev, ThetaB_prev;
-float RPM_A, RPM_A_ref;
+float RPM_A;
 float vel_A;
-float e_A, e_prev_A;
-float inte_A, inte_prev_A;
 int PWM_A_val;
 float Dist_A;
 // ************ DEFINITIONS B************
-float kp_B = 1.58;
-float ki_B = 0.001 ;
-float kd_B = 0.0005;
 volatile long EncoderCountB = 0;
 float ThetaA, ThetaB;
-float RPM_B, RPM_B_ref;
+float RPM_B;
 float vel_B;
-float e_B, e_prev_B;
-float inte_B, inte_prev_B;
 int PWM_B_val;
 float Dist_B;
 
@@ -70,11 +60,7 @@ float Diam_ruedas = 0.065;
 float R_ruedas = Diam_ruedas/2;
 float L_robot = (320-26)/2;
 
-int explorer_mode = 1;
 int instruction = -1;
-float largo = 3.0;
-int advance = 0;
-int state = 0;
 
 int duration;
 int distance;
@@ -82,6 +68,7 @@ int distance;
 int scooping = 0;
 unsigned long startScoop = 0;
 unsigned long currentMillis = 0;
+
 void checkDistance()
 {
     // Clear the trigPin by setting it LOW:
@@ -110,9 +97,8 @@ void scoop() {
     if(scooping == 1){
       currentMillis = millis();
       if (currentMillis - startScoop >= SCOOPDELAY) {
+          angle++;
           servo.write(angle);
-          angle++;
-          angle++;
           startScoop = currentMillis;
       }
       if(angle >= MAXANG){
@@ -122,9 +108,8 @@ void scoop() {
     if(scooping == 2){
       currentMillis = millis();
       if (currentMillis - startScoop >= SCOOPDELAY) {
+          angle--;
           servo.write(angle);
-          angle--;
-          angle--;
           startScoop = currentMillis;
       }
       if(angle <= MINANG){
@@ -271,27 +256,22 @@ void readSerialPort()
   }
 }
 
-void stringSplitter(char *msg, int *instruction, float *left_rpm, float *right_rpm) {
+void stringSplitter(char *msg, int *instruction, int *left_pwm, int *right_pwm) {
   char *token = strtok(msg, ",");
   for (int i = 0; i < 2; i++) {
     int intValue = 0;
     float floatValue = 0.0;
-    if(i == 0){
-      intValue = atoi(token);
-    }
-    else{
-      floatValue = atof(token); // Use atof for floating-point values
-    }
+    intValue = atoi(token);
     if(*instruction == 1) break;
     switch (i) {
       case 0:
         *instruction = intValue;
         break;
       case 1:
-        *left_rpm = floatValue;
+        *left_pwm = intValue;
         break;
       case 2:
-        *right_rpm = floatValue;
+        *right_pwm = intValue;
         break;
     }
     token = strtok(NULL, ",");
@@ -332,14 +312,8 @@ void setup() {
 void loop() {
   readSerialPort();
   if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-    stringSplitter(msg, &instruction, &RPM_A_ref, &RPM_B_ref);
+    stringSplitter(msg, &instruction, &PWM_A_val, &PWM_B_val);
     msg[0] == '\0';
-  }
-  if(instruction == 0){
-    explorer_mode = 0;
-  }
-  else if(instruction == 1){
-    explorer_mode = 1;
   }
   if(scooping == 0){
     checkDistance();
@@ -354,96 +328,9 @@ void loop() {
   }
   
   if(scooping == 3){
-    if(millis()-startScoop >= 1000){
+    if(millis()-startScoop >= 2000){
       scooping = 0;
     }
-  }
-  if(explorer_mode  == 1){
-    
-    if(state == 0){
-      RPM_A_ref = 200;
-      RPM_B_ref = 200;
-      if ((Dist_A+Dist_B)/2 >= largo){
-        state = 1;
-      }
-    }
-    else if(state == 1){
-      RPM_A_ref = 0;
-      RPM_B_ref = 0;
-    }
-    /*else if(state == 1){
-      RPM_A_ref = 200;
-      RPM_B_ref = 0;
-      if (Dist_A >= 2*largo){
-        state = 2;
-      }
-    }
-    else if(sstate == 2){
-      RPM_A_ref = 0;
-      RPM_B_ref = 0;
-      if (Dist_A >= 3*largo){
-        state = 3;
-      }
-    }
-    else if(state == 3){
-      RPM_A_ref = -100;
-      RPM_B_ref = -100;
-      if (Dist_A >= 4*largo){
-        state = 4;
-      }
-    }
-    else if(state == 4){
-      RPM_A_ref = 0;
-      RPM_B_ref = 0;
-      if (Dist_A >= 5*largo){
-        state = 5;
-      }
-    }
-    else if(state == 5){
-      RPM_A_ref = 200;
-      RPM_B_ref = 200;
-      if (Dist_A >= 6*largo){
-        state = 6;
-      }
-    }
-    else if(state == 6){
-      RPM_A_ref = 200;
-      RPM_B_ref = 0;
-      if (Dist_A >= 7*largo){
-        state = 7;
-      }
-    }
-    else if(state == 7){
-      RPM_A_ref = 0;
-      RPM_B_ref = 0;
-      if (Dist_A >= 8*largo){
-        state = 8;
-      }
-    }
-    else if(state == 8){
-      RPM_A_ref = -100;
-      RPM_B_ref = -100;
-      if (Dist_A >= 9*largo){
-        state = 9;
-      }
-    }
-    else if(state == 9){
-      RPM_A_ref = 0;
-      RPM_B_ref = 0;
-      if (Dist_A >= 10*largo){
-        state = 10;
-      }
-    }
-    else if(state == 10){
-      RPM_A_ref = 200;
-      RPM_B_ref = 200;
-      if (Dist_A >= 11*largo){
-        state = 11;
-      }
-    }
-    else if(state == 11){
-      RPM_A_ref = 200
-    }*/
   }
   if ((millis() - t_prev)>= 100) {
       t = millis();
@@ -454,14 +341,6 @@ void loop() {
       dt = t - t_prev;
       RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
       RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
-      e_A = RPM_A_ref - RPM_A;
-      e_B = RPM_B_ref - RPM_B;
-      inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
-      inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
-      PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
-      PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
-      //PWM_A_val = CheckPWM(PWM_A_val);
-      //PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
 
@@ -477,9 +356,7 @@ void loop() {
 
       Serial.print(t);
       Serial.print(", ");
-      Serial.print("refA: ");
-      Serial.print(RPM_A_ref);
-      Serial.print(" | EncoderCountA: ");
+      Serial.print("EncoderCountA: ");
       Serial.print(EncoderCountA);
       Serial.print(" | RPMA: ");
       Serial.print(RPM_A);
@@ -487,9 +364,7 @@ void loop() {
       
       
 
-      Serial.print("refB: ");
-      Serial.print(RPM_B_ref);
-      Serial.print(" | EncoderCountB: ");
+      Serial.print("EncoderCountB: ");
       Serial.print(EncoderCountB);
       Serial.print(" | RPM_B: ");
       Serial.print(RPM_B);
@@ -506,9 +381,5 @@ void loop() {
       ThetaA_prev = ThetaA;
       ThetaB_prev = ThetaB;
       t_prev = t;
-      inte_prev_A = inte_A;
-      inte_prev_B = inte_B;
-      e_prev_A = e_A;
-      e_prev_B = e_B;
   }
 }
