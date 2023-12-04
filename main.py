@@ -17,15 +17,13 @@ class NutsTracker:
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = True
+        self.show = False
         self.x = -1
         self.y = -1
         self.x_max = 0
         self.y_max = 0
         self.model = model
-        self.transform = transforms.Compose([
-            transforms.ToTensor(),
-        ])
+        self.detect = False
 
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(0)
@@ -43,6 +41,7 @@ class NutsTracker:
                 for result in predictions:
                     result_bboxes = result.boxes
                     #print(result)
+                    a = False
                     for result_bbox in result_bboxes:
                         b_coordinates = result_bbox.xyxy[0]
                         too_much_overlap = False
@@ -67,13 +66,17 @@ class NutsTracker:
                         if not too_much_overlap:
                             confidence = result_bbox.conf
                             if confidence[0].cpu().numpy() > 0.5:
+                                a = True
                                 self.x, self.y, w, h = b_center.cpu().numpy()
+                                self.x = int(self.x)
+                                self.y = int(self.y)
                                 if self.show:
                                     frame = cv2.circle(frame, (int(b_center[0].cpu().numpy()), int(b_center[1].cpu().numpy())), 5, (0, 0, 255), -1)
                                     frame = cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
                                     label = "castana"
                                     frame = cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                                     # Display the resulting frame with predictions
+                        self.detect = a
             if self.show:
                 cv2.imshow('Object Detection', frame)
                 cv2.waitKey(1)
@@ -95,9 +98,8 @@ class Communication:
         self.baud = 9600
         self.data = ''
 
-
     def begin(self):
-        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
@@ -126,6 +128,7 @@ class Communication:
 
 class PID:
     def __init__(self, kp=0.0, ki=0.0, kd=0.0, x_target=0.0, y_target=0.0):
+        self.clas = "PID"
         self.kp = kp
         self.ki = ki
         self.kd = kd
@@ -148,8 +151,8 @@ class PID:
 
     def err_reference(self, x, y):
         # Returns the reference for the PID
-        self.theta_error(self,x, y)
-        self.lineal_error(self,x, y)
+        self.theta_error(x, y)
+        self.lineal_error(x, y)
         if self.theta_err == 0:
             self.errA = self.lineal_err
             self.errB = self.lineal_err
@@ -158,7 +161,7 @@ class PID:
             self.errB = -self.theta_err * self.lineal_err
 
     def update(self, delta_time, x, y):
-        self.err_reference(self,x, y)
+        self.err_reference(x, y)
         self.integral += self.errA * delta_time
         derivativeA = (self.errA - self.previous_error) / delta_time
         outputA = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA
@@ -183,11 +186,10 @@ class PID:
 
 class Brain:
 
-    def __init__(self, tracker, coms, pid) -> None:
+    def __init__(self, tracker, coms) -> None:
 
         self.tracker = tracker
         self.coms = coms
-        self.control = PID
 
         self.tracking_thread = threading.Thread(target=self.track_wrapper, args=())
         self.tracking_thread.daemon = True
@@ -212,30 +214,26 @@ class Brain:
 
     def track_wrapper(self):
         # This function is used to run the track() method in a separate thread.
-        print("Starting tracking")
         self.tracker.track()
-        print("Ending tracking")
     def begin(self):
         self.tracker.initiateVideo()
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()
-        self.pid = PID(0.01, 0.0, 0.0, round(
+        self.control = PID(0.5, 0.0, 0.0, round(
             self.tracker.x_max/2), round(self.tracker.y_max/2))
         
 
     def do(self):
         running = True
-        sendIt = True
-
-        RPMA_values = []
-        RPMB_values = []
-        RPMref_values = []
+        #RPMA_values = []
+        #RPMB_values = []
+        #RPMref_values = []
 
 
         #csv_file_path = 'serial_data.csv'
         #csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
-        last_data = ""
+        #last_data = ""
         try:
             #with open(csv_file_path, 'w', newline='') as csvfile:
                 #csv_writer = csv.writer(csvfile)
@@ -261,12 +259,15 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     # Movimiento automático
-                    if self.tracker.distancia != "0":
+                    if self.tracker.detect:
                         actual_time = time.time()
-                        self.control.update(
-                            actual_time - self.last_time, self.tracker.x, self.tracker.y)
+                        dt = actual_time - self.last_time
+                        outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
                         self.last_time = actual_time
-                        self.coms.comunicacion(f"{self.pid.outputA},{self.pid.outputB}")
+                        print(f"OutputA: {outputA}, OutputB: {outputB}")
+                        self.coms.comunicacion(f"1 {outputA},{outputB}")
+                    else:
+                        self.coms.comunicacion(self.instructions["stop"])
                     # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
                         # timestamp, aData, bData = self.coms.data.split(',')
@@ -305,4 +306,4 @@ class Brain:
 
 
 model = YOLO("best.pt")
-brain = Brain(NutsTracker(model), Communication(), PID())
+brain = Brain(NutsTracker(model), Communication())

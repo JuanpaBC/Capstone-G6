@@ -258,7 +258,7 @@ void readSerialPort()
 
 void stringSplitter(char *msg, int *instruction, int *left_pwm, int *right_pwm) {
   char *token = strtok(msg, ",");
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 2; i++) {
     int intValue = 0;
     float floatValue = 0.0;
     intValue = atoi(token);
@@ -273,7 +273,7 @@ void stringSplitter(char *msg, int *instruction, int *left_pwm, int *right_pwm) 
         *right_pwm = intValue;
         break;
     }
-    if(*instruction == 1) break;
+    if(*instruction != 1) break;
     token = strtok(NULL, ",");
   }
 }
@@ -328,7 +328,7 @@ void loop() {
   }
   
   if(scooping == 3){
-    if(millis()-startScoop >= 2000){
+    if(millis()-startScoop >= 1000){
       scooping = 0;
     }
   }
