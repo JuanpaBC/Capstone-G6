@@ -26,7 +26,7 @@ class NutsTracker:
         self.detect = False
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
         ret, frame = self.cap.read()
         self.y_max, self.x_max, _ = frame.shape
 
@@ -38,10 +38,10 @@ class NutsTracker:
             # Make predictions
             with torch.no_grad():
                 predictions = self.model(frame)
+                a = False
                 for result in predictions:
                     result_bboxes = result.boxes
                     #print(result)
-                    a = False
                     for result_bbox in result_bboxes:
                         b_coordinates = result_bbox.xyxy[0]
                         too_much_overlap = False
@@ -76,7 +76,7 @@ class NutsTracker:
                                     label = "castana"
                                     frame = cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                                     # Display the resulting frame with predictions
-                        self.detect = a
+                self.detect = a
             if self.show:
                 cv2.imshow('Object Detection', frame)
                 cv2.waitKey(1)
@@ -157,8 +157,12 @@ class PID:
             self.errA = self.lineal_err
             self.errB = self.lineal_err
         else:
-            self.errA = self.theta_err * self.lineal_err
-            self.errB = -self.theta_err * self.lineal_err
+            if self.theta_err > 0:
+                self.errA = self.theta_err * self.lineal_err
+                self.errB = -0.5*self.theta_err * self.lineal_err
+            else:
+                self.errA = -0.5*self.theta_err * self.lineal_err
+                self.errB = self.theta_err * self.lineal_err
 
     def update(self, delta_time, x, y):
         self.err_reference(x, y)
@@ -265,7 +269,7 @@ class Brain:
                         outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
                         self.last_time = actual_time
                         print(f"OutputA: {outputA}, OutputB: {outputB}")
-                        self.coms.comunicacion(f"1 {outputA},{outputB}")
+                        self.coms.comunicacion(f"1,{outputA},{outputB}")
                     else:
                         self.coms.comunicacion(self.instructions["stop"])
                     # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
