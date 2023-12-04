@@ -1,3 +1,4 @@
+import math
 import cv2
 import numpy as np
 import serial
@@ -10,25 +11,26 @@ from ultralytics import YOLO
 import csv
 
 class NutsTracker:
-    def __init__(self):
-        self.setear_colores = False
-        self.mostrar_contorno = False
+    def __init__(self, model):
         self.cap = None
         self.image = None
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
         self.show = True
-        self.model = YOLO("best.pt")
+        self.x = -1
+        self.y = -1
+        self.x_max = 0
+        self.y_max = 0
+        self.model = model
         self.transform = transforms.Compose([
             transforms.ToTensor(),
         ])
 
-    def nothing(self, x):
-        pass
-    
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(0)
+        ret, frame = self.cap.read()
+        self.y_max, self.x_max, _ = frame.shape
 
     def track(self):
         while self.tracking:
@@ -65,8 +67,7 @@ class NutsTracker:
                         if not too_much_overlap:
                             confidence = result_bbox.conf
                             if confidence[0].cpu().numpy() > 0.5:
-                                self.distancia = str(int(b_center[0].cpu().numpy()))
-                                self.area = str(int(b_center[2].cpu().numpy() * b_center[3].cpu().numpy()))
+                                self.x, self.y, w, h = b_center.cpu().numpy()
                                 if self.show:
                                     frame = cv2.circle(frame, (int(b_center[0].cpu().numpy()), int(b_center[1].cpu().numpy())), 5, (0, 0, 255), -1)
                                     frame = cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
@@ -123,94 +124,61 @@ class Communication:
             time.sleep(0.1)
 
 
-class Pid:
-    def __init__(self):
-        self.Ts = 0.2  # time sample
-
-        self.init_pid_vars()
-        self.init_pid_params()
-        self.max_vel = 250
-        self.min_vel = 100
-        self.motor_R = 0
-        self.motor_L = 0
-
-    def init_pid_params(self):
-        self.ref_ang = 0
-        self.Kp_ang = 0.0001
-        self.Ki_ang = 0.001
-        self.Kd_ang = 0.00001
-        self.tol_ang = 50  # tolerancia a error
-        self.ref_lin = 0
-        self.Kp_lin = 0.5
-        self.Ki_lin = 0.01
-        self.Kd_lin = 0.001
-        self.tol_size = 50
-
-    def init_pid_vars(self):
-        self.E_ang = 0
-        self.E_ang_ = 0
-        self.E_ang__ = 0
-        self.C_ang = 0
-        self.C_ang_ = 0
-        self.E_lin = 0
-        self.E_lin_ = 0
-        self.E_lin__ = 0
-        self.C_lin = 0
-        self.C_lin_ = 0
-
-    def update_ang(self, error):
-        self.E_ang__ = self.E_ang_
-        self.E_ang_ = self.E_ang
-        self.E_ang = error
-        self.C_ang_ = self.C_ang
-        self.C_ang = (self.C_ang_
-                      + (self.Kp_ang + self.Ts*self.Ki_ang +
-                         self.Kd_ang/self.Ts)*self.E_ang
-                      + (-self.Kp_ang - 2*self.Kd_ang/self.Ts)*self.E_ang_
-                      + (self.Kd_ang/self.Ts)*self.E_ang__)
-
-    def update_lin(self, size):
-        self.E_ling__ = self.E_lin_
-        self.E_ling_ = self.E_lin
-        self.E_ling = size
-        self.C_lin_ = self.C_lin
-        self.C_lin = (self.C_lin_
-                      + (self.Kp_lin + self.Ts * self.Ki_lin +
-                         self.Kd_lin / self.Ts) * self.E_lin
-                      + (-self.Kp_lin - 2 * self.Kd_lin/self.Ts) * self.E_lin_
-                      + (self.Kd_lin / self.Ts) * self.E_lin__)
-
-    def update(self, error, size):
-        self.update_ang(error)
-        self.update_lin(size)
-
-    def make_control(self, distancia, size):
-        if distancia == "0":  # there is not objective
-            self.motor_L = 0
-            self.motor_R = 0
+class PID:
+    def __init__(self, kp=0.0, ki=0.0, kd=0.0, x_target=0.0, y_target=0.0):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.previous_error = 0.0
+        self.integral = 0.0
+        self.x_target = x_target
+        self.y_target = y_target
+        
+    def theta_error(self, x, y):
+        # Returns the error in the angle theta
+        angle = math.atan2(self.y_target - y, self.x_target - x)*180/math.pi
+        if -7.5 < angle < 7.5:
+            self.theta_err = 0
         else:
-            distancia = int(distancia)
-            size = int(size)
-            ang_error = 0 if abs(
-                distancia - self.ref_ang) < self.tol_ang else distancia
-            lin_error = 0 if abs(size - self.ref_lin) < self.tol_size else size
-            self.update(ang_error, lin_error)
-            self.C_lin = 0
-            self.motor_L = self.check_limit(self.C_lin + self.C_ang)
-            self.motor_R = self.check_limit(self.C_lin - self.C_ang)
-        #print("vel_lin", self.C_lin, "  vel_ang", self.C_ang,
-              #"  mR", self.motor_R, "  mL", self.motor_L)
+            self.theta_err = angle/abs(angle)
 
-    def check_limit(self, vel):
-        if abs(vel) < self.min_vel:
-            return np.sign(vel) * self.min_vel
-        if abs(vel) > self.max_vel:
-            return np.sign(vel) * self.max_vel
-        return vel
+    def lineal_error(self, x, y):
+        # Returns the error in the lineal distance
+        self.lineal_err = math.sqrt((self.x_target - x)**2 + (self.y_target - y)**2)
 
-    def get_control(self):
-        right, left = [self.motor_R, self.motor_L]
-        return "0, " + str(int(right)) +","+ str(int(left)) + "\n"
+    def err_reference(self, x, y):
+        # Returns the reference for the PID
+        self.theta_error(self,x, y)
+        self.lineal_error(self,x, y)
+        if self.theta_err == 0:
+            self.errA = self.lineal_err
+            self.errB = self.lineal_err
+        else:
+            self.errA = self.theta_err * self.lineal_err
+            self.errB = -self.theta_err * self.lineal_err
+
+    def update(self, delta_time, x, y):
+        self.err_reference(self,x, y)
+        self.integral += self.errA * delta_time
+        derivativeA = (self.errA - self.previous_error) / delta_time
+        outputA = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA
+        self.previous_error = self.errA
+
+        self.integral += self.errB * delta_time
+        derivativeB = (self.errB - self.previous_error) / delta_time
+        outputB = self.kp * self.errB + self.ki * self.integral + self.kd * derivativeB
+        self.previous_error = self.errB
+
+        if outputA > 0:
+            outputA = min(outputA, 255)
+        elif outputA < 0:
+            outputA = max(outputA, -255)
+        if outputB > 0:
+            outputB = min(outputB, 255)
+        elif outputB < 0:
+            outputB = max(outputB, -255)
+
+        return outputA, outputB
 
 
 class Brain:
@@ -219,18 +187,15 @@ class Brain:
 
         self.tracker = tracker
         self.coms = coms
-        self.pid = pid
+        self.control = PID
 
-        self.tracking_thread = threading.Thread(target=self.track_wrapper, args=(self,))
+        self.tracking_thread = threading.Thread(target=self.track_wrapper, args=())
         self.tracking_thread.daemon = True
 
         self.read_messages_thread = threading.Thread(target=self.coms.read_and_print_messages)
         self.read_messages_thread.daemon = True
 
-        self.objx = 3
-        self.objy = 3
-        self.x = 0
-        self.y = 0
+        
         self.turning = False
         self.instructions = {
             "forward" : "1,200,200\n",
@@ -240,19 +205,24 @@ class Brain:
             "shovel" : "2\n",
             "stop" : "1,0,0\n"
         }
-
+        self.last_time = 0.0
         self.begin()
         self.do()
 
+
+    def track_wrapper(self):
+        # This function is used to run the track() method in a separate thread.
+        print("Starting tracking")
+        self.tracker.track()
+        print("Ending tracking")
     def begin(self):
         self.tracker.initiateVideo()
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()
-    
-    def track_wrapper(self):
-        # This function is used to run the track() method in a separate thread.
-        self.tracker.track()
+        self.pid = PID(0.01, 0.0, 0.0, round(
+            self.tracker.x_max/2), round(self.tracker.y_max/2))
+        
 
     def do(self):
         running = True
@@ -263,56 +233,55 @@ class Brain:
         RPMref_values = []
 
 
-        csv_file_path = 'serial_data.csv'
-        csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
+        #csv_file_path = 'serial_data.csv'
+        #csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
         last_data = ""
         try:
-            with open(csv_file_path, 'w', newline='') as csvfile:
-                csv_writer = csv.writer(csvfile)
-                csv_writer.writerow(csv_header)
-                while running:
-                    if (self.coms.manual_mode):
-                        command = input()
-                        if command == 'a':
-                            self.coms.comunicacion(self.instructions["left"])
-                        elif command == 'd':
-                            # coms.comunicacion('R\n')
-                            self.coms.comunicacion(self.instructions["right"])
-                        elif command == 'w':
-                            # coms.comunicacion('U\n')
-                            self.coms.comunicacion(self.instructions["forward"])
-                        elif command == 's':
-                            # coms.comunicacion('D\n')
-                            self.coms.comunicacion(self.instructions["backward"])
-                        elif command == 'p':
-                            self.coms.comunicacion(self.instructions["shovel"])
-                        elif command == 'q':
-                            self.coms.comunicacion(self.instructions["stop"])
-                    else:
-                        # Movimiento automático
-                        if self.tracker.distancia != "0":
-                            self.control.make_control(self.tracker.distancia, self.tracker.area)
-                            self.coms.comunicacion(self.control.get_control())
-                        
-                        # Escribir en csv
-                        if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
-                            # Extract RPMA, RPMB, RPMref from the updated 'data'
-                            timestamp, aData, bData = self.coms.data.split(',')
-                            aParts = aData.split('|')
-                            BParts = bData.split('|')
-                            ARef = float(aParts[0].split(':')[1])
-                            RPMA = float(aParts[1].split(':')[1])
-                            BRef = float(BParts[0].split(':')[1])
-                            RPMB = float(BParts[1].split(':')[1])
-                            # Save data to listsc
-                            RPMA_values.append(RPMA)
-                            RPMB_values.append(RPMB)
-                            RPMref_values.append(ARef)
-                            # Save data to CSV
-                            csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
-                            last_data = self.coms.data
+            #with open(csv_file_path, 'w', newline='') as csvfile:
+                #csv_writer = csv.writer(csvfile)
+                #csv_writer.writerow(csv_header)
+            self.last_time = time.time()
+            while running:
+                if (self.coms.manual_mode):
+                    command = input()
+                    if command == 'a':
+                        self.coms.comunicacion(self.instructions["left"])
+                    elif command == 'd':
+                        # coms.comunicacion('R\n')
+                        self.coms.comunicacion(self.instructions["right"])
+                    elif command == 'w':
+                        # coms.comunicacion('U\n')
+                        self.coms.comunicacion(self.instructions["forward"])
+                    elif command == 's':
+                        # coms.comunicacion('D\n')
+                        self.coms.comunicacion(self.instructions["backward"])
+                    elif command == 'p':
+                        self.coms.comunicacion(self.instructions["shovel"])
+                    elif command == 'q':
+                        self.coms.comunicacion(self.instructions["stop"])
+                else:
+                    # Movimiento automático
+                    if self.tracker.distancia != "0":
+                        actual_time = time.time()
+                        self.control.update(
+                            actual_time - self.last_time, self.tracker.x, self.tracker.y)
+                        self.last_time = actual_time
+                        self.coms.comunicacion(f"{self.pid.outputA},{self.pid.outputB}")
+                    # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
+                        # Extract RPMA, RPMB, RPMref from the updated 'data'
+                        # timestamp, aData, bData = self.coms.data.split(',')
+                        # aParts = aData.split('|')
+                        # BParts = bData.split('|')
+                        # RPMA = float(aParts[0].split(':')[1])
+                        # RPMB = float(BParts[0].split(':')[1])
+                        # Save data to listsc
+                        # RPMA_values.append(RPMA)
+                        # RPMB_values.append(RPMB)
+                        # Save data to CSV
+                        #csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
+                        # last_data = self.coms.data
 
-                            time.sleep(0.1)
+                        # time.sleep(0.1)
                     # if keyboard.is_pressed('x'):
                     #    running = False
                     #    print("Stopped")
@@ -335,4 +304,5 @@ class Brain:
         self.tracker.finish()
 
 
-brain = Brain(NutsTracker(), Communication(), Pid())
+model = YOLO("best.pt")
+brain = Brain(NutsTracker(model), Communication(), PID())
