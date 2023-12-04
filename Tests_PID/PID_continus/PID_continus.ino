@@ -371,14 +371,6 @@ void loop() {
   }
   if ((millis() - t_prev)>= 100) {
       t = millis();
-
-      if (Pos_y < 1){
-        RPM_A_ref = 200;
-        RPM_B_ref = -200;
-      } else {
-        RPM_A_ref = 0;
-        RPM_B_ref = 0;
-      }
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
       Dist_A = Dist_A + ((ThetaA - ThetaA_prev)) / NFactor * pi * Diam_ruedas;

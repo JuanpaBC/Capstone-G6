@@ -11,7 +11,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_L = '/dev/ttyACM0'  #'COM4' # Change this to your actual target
+        self.target_L = 'COM7'  #'COM4' # Change this to your actual target
         self.baud = 9600
         self.data = ''
 
@@ -65,24 +65,20 @@ read_messages_thread.start()
 
 running = True
 sendIt = True
-duration = 1  # Duration in seconds for each set of messages
-
-start_time = time.time()
-
-
+duration = 2  # Duration in seconds for each set of messages
 
 
 # CSV file configuration
 csv_file_path = 'serial_data.csv'
 csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref','EncoderA','EncoderB']
 
-RPMref_values = [50,100,150,200]
+RPMref_values = [0, 50,100,150,200]
 # External variables
 RPMA_values = []
 RPMB_values = []
 EncoderA_values = []  # New list for EncoderA values
 EncoderB_values = []  # New list for EncoderB values
-
+sendIt = True
 v_ref = str(250)
 i = 0
 try:
@@ -90,20 +86,21 @@ try:
         csv_writer = csv.writer(csvfile)
         csv_writer.writerow(csv_header)
 
+        start_time = time.time()
         while running:
             current_time = time.time()
             elapsed_time = current_time - start_time
 
             if elapsed_time >= duration:
                 start_time = current_time  # Reset the start time
-
-                if sendIt:
-                    if(i==0):
-                        coms.comunicacion(f"{RPMref_values[3]} ,{RPMref_values[3]}")
-                    if(i!=3):
-                        i= i+1
-                # Toggle the flag for the next iteration
-                sendIt = not sendIt
+                if(i == 0):
+                    coms.comunicacion(f"{1},150,-150")
+                if(i == 1):
+                    coms.comunicacion(f"{1},0,0")
+                if(i!=4):
+                    i= i+1
+                
+                
             if(len(coms.data.split(','))>=3 and coms.data != last_data):
                 # Extract RPMA, RPMB, RPMref, EncoderA, EncoderB from the updated 'data'
                 timestamp, aData, bData = coms.data.split(',')

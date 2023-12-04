@@ -70,7 +70,7 @@ float Diam_ruedas = 0.065;
 float R_ruedas = Diam_ruedas/2;
 float L_robot = (320-26)/2;
 
-int explorer_mode = 1;
+int explorer_mode = -1;
 int instruction = -1;
 float largo = 3.0;
 int advance = 0;
@@ -273,7 +273,7 @@ void readSerialPort()
 
 void stringSplitter(char *msg, int *instruction, float *left_rpm, float *right_rpm) {
   char *token = strtok(msg, ",");
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 3; i++) {
     int intValue = 0;
     float floatValue = 0.0;
     if(i == 0){
@@ -282,7 +282,6 @@ void stringSplitter(char *msg, int *instruction, float *left_rpm, float *right_r
     else{
       floatValue = atof(token); // Use atof for floating-point values
     }
-    if(*instruction == 1) break;
     switch (i) {
       case 0:
         *instruction = intValue;
@@ -335,10 +334,10 @@ void loop() {
     stringSplitter(msg, &instruction, &RPM_A_ref, &RPM_B_ref);
     msg[0] == '\0';
   }
-  if(instruction == 0){
+  if(instruction == 1){
     explorer_mode = 0;
   }
-  else if(instruction == 1){
+  else if(instruction == 0){
     explorer_mode = 1;
   }
   if(scooping == 0){

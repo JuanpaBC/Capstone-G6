@@ -325,7 +325,7 @@ class Brain:
             self.finish()
 
     def automatic(self):
-
+        return
 
 
     def finish(self):
