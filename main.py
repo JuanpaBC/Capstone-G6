@@ -152,11 +152,14 @@ class Communication:
 
 
 class PID:
-    def __init__(self, kp=0.0, ki=0.0, kd=0.0, x_target=0.0, y_target=0.0):
+    def __init__(self, kp=0.0, ki=0.0, kd=0.0, kpt=0.0, kit=0.0, kdt=0.0, x_target=0.0, y_target=0.0):
         self.clas = "PID"
         self.kp = kp
         self.ki = ki
         self.kd = kd
+        self.kp_t = kpt
+        self.ki_t = kit
+        self.kd_t = kdt
         self.previous_error = 0.0
         self.integral = 0.0
         self.x_target = x_target
@@ -166,44 +169,57 @@ class PID:
         
     def theta_error(self, x, y):
         # Returns the error in the angle theta
-        angle = np.sign(x - self.x_target)*math.atan2(self.y_target - y, x - self.x_target)*180/math.pi
-        if -self.tolangle < angle < self.tolangle:
-            self.theta_err = 0
-        else:
-            self.theta_err = angle/abs(angle)
+        angle = np.sign(x - self.x_target)*math.atan2(self.y_target - y, x - self.x_target)
+        self.theta_err = angle/abs(angle)
 
     def lineal_error(self, x, y):
         # Returns the error in the lineal distance
-        self.lineal_err = math.sqrt((self.x_target - x)**2 + (self.y_target - y)**2)/2
-
-    def err_reference(self, x, y):
-        # Returns the reference for the PID
+        self.lineal_err = ((self.x_target - x) + (self.y_target - y))**2/(self.x_target * self.y_target)
+        
+   
+    def update(self, delta_time, x, y):
         self.theta_error(x, y)
         self.lineal_error(x, y)
         print(self.theta_err)
+        
+        #PID para lineal y angular separados con distintos kp, ki y kd
+        
+        # Error lineal
         if self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels):
+            
             self.errA = self.lineal_err/2
-            self.errB = self.lineal_err/2
+            self.integral += self.errA * delta_time
+            derivativeA = (self.errA - self.previous_error) / delta_time
+            outputA = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA
+            outputB = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA #Copiamos A = B
+            self.previous_error = self.errA
+
+        # Error angular
         else:
+            # Si el error es positivo, el motor A gira más rápido que el B
             if self.theta_err > 0:
-                self.errA = 1.2*self.theta_err * self.lineal_err
-                self.errB = -1*self.theta_err * self.lineal_err
+                self.errA = 1.2*self.theta_err
+                self.errB = -1*self.theta_err
+            # Si el error es negativo, el motor B gira más rápido que el A
             else:
-                self.errA = 0.9*self.theta_err * self.lineal_err
-                self.errB = -1.2*self.theta_err * self.lineal_err
+                self.errA = 0.9*self.theta_err
+                self.errB = -1.2*self.theta_err
+        
+            # PID para el error angular A
+            self.integral += self.errA * delta_time
+            derivativeA = (self.errA - self.previous_error) / delta_time
+            outputA = self.kp_t * self.errA + self.ki_t * self.integral + self.kd_t * derivativeA
+            self.previous_error = self.errA
 
-    def update(self, delta_time, x, y):
-        self.err_reference(x, y)
-        self.integral += self.errA * delta_time
-        derivativeA = (self.errA - self.previous_error) / delta_time
-        outputA = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA
-        self.previous_error = self.errA
-
-        self.integral += self.errB * delta_time
-        derivativeB = (self.errB - self.previous_error) / delta_time
-        outputB = self.kp * self.errB + self.ki * self.integral + self.kd * derivativeB
-        self.previous_error = self.errB
-
+            # PID para el error angular B
+            self.integral += self.errB * delta_time
+            derivativeA = (self.errB - self.previous_error) / delta_time
+            outputB = self.kp_t * self.errB + self.ki_t * self.integral + self.kd_t * derivativeA
+            self.previous_error = self.errB
+        
+        
+        
+        # Limitar la salida
         if outputA > 0:
             outputA = min(outputA, 255)
             outputA = max(outputA, 190)
