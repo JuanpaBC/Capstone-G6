@@ -76,7 +76,7 @@ start_time = time.time()
 csv_file_path = 'serial_data.csv'
 csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref','EncoderA','EncoderB']
 
-RPMref_values = [200,-200,0,0]
+RPMref_values = [200,0,0,0]
 # External variables
 RPMA_values = []
 RPMB_values = []
