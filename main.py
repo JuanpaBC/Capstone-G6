@@ -216,14 +216,33 @@ class Pid:
 class Brain:
 
     def __init__(self, tracker, coms, pid) -> None:
+
         self.tracker = tracker
         self.coms = coms
         self.pid = pid
+
         self.tracking_thread = threading.Thread(target=self.track_wrapper, args=(self,))
         self.tracking_thread.daemon = True
+
         self.read_messages_thread = threading.Thread(target=self.coms.read_and_print_messages)
         self.read_messages_thread.daemon = True
+
+        self.objx = 3
+        self.objy = 3
+        self.x = 0
+        self.y = 0
+        self.turning = False
+        self.instructions = {
+            "forward" : "1,200,200\n",
+            "backward" : "1,-200,-200\n",
+            "right" : "1,200,-200\n",
+            "left" : "1,-200,200\n",
+            "shovel" : "2\n",
+            "stop" : "1,0,0\n"
+        }
+
         self.begin()
+        self.do()
 
     def begin(self):
         self.tracker.initiateVideo()
@@ -255,24 +274,27 @@ class Brain:
                     if (self.coms.manual_mode):
                         command = input()
                         if command == 'a':
-                            self.coms.comunicacion('1,-200,200\n')
+                            self.coms.comunicacion(self.instructions["left"])
                         elif command == 'd':
                             # coms.comunicacion('R\n')
-                            self.coms.comunicacion('1,200,-200\n')
+                            self.coms.comunicacion(self.instructions["right"])
                         elif command == 'w':
                             # coms.comunicacion('U\n')
-                            self.coms.comunicacion('1,200,200\n')
+                            self.coms.comunicacion(self.instructions["forward"])
                         elif command == 's':
                             # coms.comunicacion('D\n')
-                            self.coms.comunicacion('1,-200,-200\n')
+                            self.coms.comunicacion(self.instructions["backward"])
                         elif command == 'p':
-                            self.coms.comunicacion('2\n')
+                            self.coms.comunicacion(self.instructions["shovel"])
                         elif command == 'q':
-                            self.coms.comunicacion('1,0,0\n')
+                            self.coms.comunicacion(self.instructions["stop"])
                     else:
+                        # Movimiento automático
                         if self.tracker.distancia != "0":
                             self.control.make_control(self.tracker.distancia, self.tracker.area)
                             self.coms.comunicacion(self.control.get_control())
+                        
+                        # Escribir en csv
                         if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
                             # Extract RPMA, RPMB, RPMref from the updated 'data'
                             timestamp, aData, bData = self.coms.data.split(',')
@@ -301,6 +323,10 @@ class Brain:
 
         finally:
             self.finish()
+
+    def automatic(self):
+
+
 
     def finish(self):
         # Close the serial port
