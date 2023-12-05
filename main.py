@@ -31,7 +31,7 @@ class NutsTracker:
         self.obj = [0, 0]
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -47,7 +47,7 @@ class NutsTracker:
             with torch.no_grad():
                 predictions = self.model(frame)
                 a = False
-                min_dist = 1000
+                min_dist = 10000000000000000000000000
                 best_x = 0
                 best_y = 0
                 for result in predictions:
@@ -79,7 +79,7 @@ class NutsTracker:
                             if confidence[0].cpu().numpy() > 0:
                                 a = True
                                 x, y, w, h = b_center.cpu().numpy()
-                                dist = (x - self.obj[0])^2 + (y - self.obj[1])^2
+                                dist = (x - self.obj[0])**2 + (y - self.obj[1])**2
                                 if dist <= min_dist:
                                     min_dist = dist
                                     best_x = x
@@ -134,7 +134,7 @@ class Communication:
         self.data = ''
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
@@ -175,6 +175,7 @@ class PID:
         self.previous_errorB= 0.0
         self.integral_angularA = 0.0
         self.integral_angularB = 0.0
+        self.integral_lineal = 0.0
         self.x_target = x_target
         self.y_target = y_target
         self.tolangle = 7.5
@@ -195,13 +196,12 @@ class PID:
     def update(self, delta_time, x, y):
         self.theta_error(x, y)
         self.lineal_error(x, y)
-        print(self.theta_err)
         
         #PID para lineal y angular separados con distintos kp, ki y kd
         
         # Error lineal
         if self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels):
-            
+            self.integral_angularA = 0
             self.errA = self.lineal_err/2
             self.integral_lineal += self.errA * delta_time
             derivativeA = (self.errA - self.previous_error) / delta_time
@@ -218,7 +218,7 @@ class PID:
             # Si el error es positivo, el motor A gira más rápido que el B
             self.errA = self.theta_err
             self.errB = -self.theta_err
-        
+            print(self.theta_err)
             # PID para el error angular A
             self.integral_angularA += self.errA * delta_time
             derivativeA = (self.errA - self.previous_errorA) / delta_time
@@ -278,8 +278,7 @@ class Brain:
         self.history = []
 
         self.distance = 1
-        self.turning = False
-        self.state = 1
+        self.state = 0
         self.startTurnAround = 0
         self.instructions = {
             "forward" : "1,200,200\n",
@@ -289,7 +288,7 @@ class Brain:
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
             "stop" : "1,0,0\n",
-            "slow" : "1,68,68\n"
+            "slow" : "1,74,74\n"
         }
         self.scoop_in_progress = False
         self.scooping = 0
@@ -302,10 +301,15 @@ class Brain:
         self.tracker.track()
 
     def begin(self):
+        print("Starting...")
         self.tracker.initiateVideo()
+        print("Video Started...")
         self.coms.begin()
+        print("Coms Started...")
         self.tracking_thread.start()
-        self.read_messages_thread.start()        
+        print("Track thread Started...")
+        self.read_messages_thread.start()
+        print("read message thread Started...")
         self.control = PID(6, 0.03, 0.1, 300,5,5,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         #self.control = PID(0.35, 0.001, 0.008, round(
@@ -347,7 +351,7 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     
-                    if(((time.time() - start_time) > 15)):
+                    if(((time.time() - start_time) > 10)):
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
@@ -379,7 +383,7 @@ class Brain:
             self.finish()
 
     def automatic(self):
-        if(self.scooping != 0):
+        if(False):
             print(self.scooping)
             self.scoop_in_progress = True
             print("OutputA: 0, OutputB: 0")
@@ -391,6 +395,7 @@ class Brain:
             else:
                 if self.going_back:
                     if len(self.history) > 0:
+                        print("going back")
                         instruction = self.history.pop(-1)
                         print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
                         self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
@@ -408,7 +413,7 @@ class Brain:
                 else:
                     self.control.integral = 0
                     if(self.state == 0):
-                        print("OutputA: 68, OutputB: 68")
+                        print(self.instructions["slow"])
                         self.coms.comunicacion(self.instructions["slow"])
                     elif(self.state == 1):
                         if(self.startTurnAround == 0):
@@ -418,9 +423,9 @@ class Brain:
                             self.coms.comunicacion(self.instructions["turnAround"])
                         else:
                             self.startTurnAround = 0
-                            self.state = 3
+                            self.state = 2
                     elif(self.state == 2):
-                        print("OutputA: 68, OutputB: 68")
+                        print(self.instructions["slow"])
                         self.coms.comunicacion(self.instructions["slow"])
                     elif(self.state == 3):
                         print("OutputA: 0, OutputB: 0.000001")
@@ -435,6 +440,7 @@ class Brain:
         self.tracker.stop_tracking()
         self.tracker.finish()
 
-
+print("loading model...")
 model = YOLO("best_f.pt")
+print("model loaded")
 brain = Brain(NutsTracker(model), Communication())
