@@ -264,7 +264,9 @@ class Brain:
         self.read_messages_thread = threading.Thread(target=self.coms.read_and_print_messages)
         self.read_messages_thread.daemon = True
 
-        
+        self.going_back = False
+        self.history = []
+
         self.turning = False
         self.instructions = {
             "forward" : "1,200,200\n",
@@ -272,16 +274,17 @@ class Brain:
             "right" : "1,200,-200\n",
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
-            "stop" : "1,0,0\n"
+            "stop" : "1,0,0\n",
+            "slow" : "1,65,65\n"
         }
         self.last_time = 0.0
         self.begin()
         self.do()
 
-
     def track_wrapper(self):
         # This function is used to run the track() method in a separate thread.
         self.tracker.track()
+
     def begin(self):
         self.tracker.initiateVideo()
         self.coms.begin()
@@ -292,12 +295,9 @@ class Brain:
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
 
-        
-
     def do(self):
         running = True
         explorer_mode = True
-        i = 0
         #RPMA_values = []
         #RPMB_values = []
         #RPMref_values = []
@@ -331,23 +331,9 @@ class Brain:
                     elif command == 'q':
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
-                    # Movimiento automático
-                    if self.tracker.detect:
-                        explorer_mode = False
-                        actual_time = time.time()
-                        dt = actual_time - self.last_time
-                        outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
-                        self.last_time = actual_time
-                        print(f"OutputA: {outputA}, OutputB: {outputB}")
-                        self.coms.comunicacion(f"1,{outputA},{outputB}")
-                    else:
-                        self.control.integral = 0
-                        i = i + 1
-                        if(explorer_mode and ((time.time() - start_time)> 5)):
-                            print("OutputA: 65, OutputB: 65")
-                            self.coms.comunicacion(f"1,65,65")
-                        if(i>5):
-                            self.coms.comunicacion(self.instructions["stop"])
+                    self.automatic(start_time)
+                        # if(i>5):
+                        #     self.coms.comunicacion(self.instructions["stop"])
                     # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
                         # timestamp, aData, bData = self.coms.data.split(',')
@@ -374,8 +360,28 @@ class Brain:
         finally:
             self.finish()
 
-    def automatic(self):
-        return
+    def automatic(self, start_time):
+        if self.tracker.detect:
+            self.going_back = True
+            actual_time = time.time()
+            dt = actual_time - self.last_time
+            outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
+            self.history.append([-1*outputA, -1*outputB])
+            self.last_time = actual_time
+            print(f"OutputA: {outputA}, OutputB: {outputB}")
+            self.coms.comunicacion(f"1,{outputA},{outputB}")
+        elif self.going_back:
+            if len(self.history) > 0:
+                instruction = self.history.pop(-1)
+                print(f"OutputA: {outputA}, OutputB: {outputB}")
+                self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
+            else:
+                self.going_back = False
+        else:
+            self.control.integral = 0
+            if(((time.time() - start_time)> 5)):
+                print("OutputA: 65, OutputB: 65")
+                self.coms.comunicacion(self.instructions["slow"])
 
 
     def finish(self):
