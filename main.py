@@ -28,14 +28,16 @@ class NutsTracker:
         self.y_max = 0
         self.model = model
         self.detect = False
+        self.obj = [0, 0]
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(2)
+        self.cap = cv2.VideoCapture(1)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
             ret, frame = self.cap.read()
         self.y_max, self.x_max, _ = frame.shape
+        self.obj = [int(self.x_max), self.y_max]
 
     def track(self):
         while self.tracking:
@@ -45,6 +47,9 @@ class NutsTracker:
             with torch.no_grad():
                 predictions = self.model(frame)
                 a = False
+                min_dist = 1000
+                best_x = 0
+                best_y = 0
                 for result in predictions:
                     result_bboxes = result.boxes
                     #print(result)
@@ -73,15 +78,20 @@ class NutsTracker:
                             confidence = result_bbox.conf
                             if confidence[0].cpu().numpy() > 0:
                                 a = True
-                                self.x, self.y, w, h = b_center.cpu().numpy()
-                                self.x = int(self.x)
-                                self.y = int(self.y)
+                                x, y, w, h = b_center.cpu().numpy()
+                                dist = (x - self.obj[0])^2 + (y - self.obj[1])^2
+                                if dist <= min_dist:
+                                    min_dist = dist
+                                    best_x = x
+                                    best_y = y
                                 if(self.record or self.show):
                                     frame = cv2.circle(frame, (int(b_center[0].cpu().numpy()), int(b_center[1].cpu().numpy())), 5, (0, 0, 255), -1)
                                     frame = cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
                                     label = "castana"
                                     frame = cv2.putText(frame, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                                 break
+                self.x = best_x
+                self.y = best_y
                 if(self.record):
                     # draw a triange of angle 7.5 from the midle bottom of the camera
                     # angle_radians = np.radians(90-7.5)
