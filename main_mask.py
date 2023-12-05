@@ -23,6 +23,7 @@ class NutsTracker:
         self.area = "0"
         self.tracking = True
         self.show = True
+        self.mostrar_contorno = True
         self.x = -1
         self.y = -1
         self.x_max = 0
@@ -34,7 +35,7 @@ class NutsTracker:
         self.max_area = 10000
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(2)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -68,10 +69,11 @@ class NutsTracker:
                 contornos, _ = cv2.findContours(
                     mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
                 )
-
+                a = False
                 for c in contornos:
                     area = cv2.contourArea(c)
                     if (area >= self.min_area) and (self.max_area >= area):
+                        a = True
                         M = cv2.moments(c)
                         if M["m00"] == 0:
                             M["m00"] = 1
@@ -90,6 +92,7 @@ class NutsTracker:
                                 frame, [nuevoContorno], 0, (0, 255, 0), 3)
                         self.distancia = str(self.x - frame.shape[1] * 0.5)
                         # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")}
+                self.detect = a
                 if len(contornos) == 0:
                     self.distancia = "0"
                 if self.show:
@@ -260,7 +263,7 @@ class Brain:
 
         self.distance = 1
         self.turning = False
-        self.state = 1
+        self.state = 0
         self.startTurnAround = 0
         self.instructions = {
             "forward" : "1,200,200\n",
@@ -332,9 +335,14 @@ class Brain:
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
-                if(len(self.coms.data.split(','))>=4 and self.coms.data != last_data):
+                if(len(self.coms.data.split(','))==4 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
-                    timestamp, aData, bData, pala = self.coms.data.split(',')
+                    splitData = self.coms.data.split(',')
+                    
+                    timestamp = splitData[0]
+                    aData = splitData[1]
+                    bData = splitData[2]
+                    pala = splitData[3]
                     self.scooping = int(pala.split(':')[1])
                         # aParts = aData.split('|')
                         # BParts = bData.split('|')
