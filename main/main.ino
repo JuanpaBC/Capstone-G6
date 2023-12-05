@@ -65,10 +65,11 @@ int instruction = -1;
 int duration;
 int distance;
 
-int scooping = 0;
 unsigned long startScoop = 0;
 unsigned long currentMillis = 0;
 
+int agarro_castana = 0;
+int scooping = 0;
 void checkDistance()
 {
     // Clear the trigPin by setting it LOW:
@@ -86,6 +87,7 @@ void checkDistance()
   distance = duration * 0.034 / 2;
 
   // Print the distance on the Serial Monitor (Ctrl+Shift+M):
+  //Serial.println(distance);
 }
 
 void scoop() {
@@ -368,6 +370,9 @@ void loop() {
       Serial.print(EncoderCountB);
       Serial.print(" | RPM_B: ");
       Serial.print(RPM_B);
+
+      Serial.print(", Pala: ");
+      Serial.print(scooping);
       Serial.println("");
 
       //Serial.print("POSX: ");

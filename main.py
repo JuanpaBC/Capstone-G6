@@ -137,7 +137,7 @@ class Communication:
                     message = self.arduino.readline().decode('utf-8').strip()
                     if message:
                         self.data = message
-                        #print(f'Recibiendo mensaje: {message}')
+                        print(f'Recibiendo mensaje: {message}')
                         self.arduino.flush()
             except Exception as e:
                 print(f"Error reading message: {e}")
@@ -267,16 +267,22 @@ class Brain:
         self.going_back = False
         self.history = []
 
+        self.distance = 1
         self.turning = False
+        self.state = 1
+        self.startTurnAround = 0
         self.instructions = {
             "forward" : "1,200,200\n",
             "backward" : "1,-200,-200\n",
+            "turnAround" : "1,250,-250\n",
             "right" : "1,200,-200\n",
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
             "stop" : "1,0,0\n",
-            "slow" : "1,65,65\n"
+            "slow" : "1,68,68\n"
         }
+        self.scoop_in_progress = False
+        self.scooping = 0
         self.last_time = 0.0
         self.begin()
         self.do()
@@ -290,18 +296,17 @@ class Brain:
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()        
-        self.control = PID(6, 0.03, 0.1, 330,5,6,round(
+        self.control = PID(6, 0.03, 0.1, 300,5,5,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
 
     def do(self):
         running = True
-        explorer_mode = True
         #RPMA_values = []
         #RPMB_values = []
         #RPMref_values = []
-
+        last_data = ''
 
         #csv_file_path = 'serial_data.csv'
         #csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
@@ -331,12 +336,15 @@ class Brain:
                     elif command == 'q':
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
-                    self.automatic(start_time)
+                    
+                    if(((time.time() - start_time) > 15)):
+                        self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
-                    # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
+                if(len(self.coms.data.split(','))>=4 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
-                        # timestamp, aData, bData = self.coms.data.split(',')
+                    timestamp, aData, bData, pala = self.coms.data.split(',')
+                    self.scooping = int(pala.split(':')[1])
                         # aParts = aData.split('|')
                         # BParts = bData.split('|')
                         # RPMA = float(aParts[0].split(':')[1])
@@ -346,7 +354,7 @@ class Brain:
                         # RPMB_values.append(RPMB)
                         # Save data to CSV
                         #csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
-                        # last_data = self.coms.data
+                    last_data = self.coms.data
 
                         # time.sleep(0.1)
                     # if keyboard.is_pressed('x'):
@@ -360,28 +368,53 @@ class Brain:
         finally:
             self.finish()
 
-    def automatic(self, start_time):
-        if self.tracker.detect:
-            self.going_back = True
-            actual_time = time.time()
-            dt = actual_time - self.last_time
-            outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
-            self.history.append([-1*outputA, -1*outputB])
-            self.last_time = actual_time
-            print(f"OutputA: {outputA}, OutputB: {outputB}")
-            self.coms.comunicacion(f"1,{outputA},{outputB}")
-        elif self.going_back:
-            if len(self.history) > 0:
-                instruction = self.history.pop(-1)
-                print(f"OutputA: {outputA}, OutputB: {outputB}")
-                self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
-            else:
-                self.going_back = False
+    def automatic(self):
+        if(self.scooping != 0):
+            print(self.scooping)
+            self.scoop_in_progress = True
+            print("OutputA: 0, OutputB: 0")
+            self.coms.comunicacion(self.instructions["stop"])
         else:
-            self.control.integral = 0
-            if(((time.time() - start_time)> 5)):
-                print("OutputA: 65, OutputB: 65")
-                self.coms.comunicacion(self.instructions["slow"])
+            if(self.scoop_in_progress):
+                self.scoop_in_progress = False
+                self.going_back = True
+            else:
+                if self.going_back:
+                    if len(self.history) > 0:
+                        instruction = self.history.pop(-1)
+                        print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
+                        self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
+                    else:
+                        self.going_back = False
+                elif self.tracker.detect and self.state != 1:
+                    #self.going_back = True
+                    actual_time = time.time()
+                    dt = actual_time - self.last_time
+                    outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
+                    self.history.append([-1*outputA, -1*outputB])
+                    self.last_time = actual_time
+                    print(f"OutputA: {outputA}, OutputB: {outputB}")
+                    self.coms.comunicacion(f"1,{outputA},{outputB}")
+                else:
+                    self.control.integral = 0
+                    if(self.state == 0):
+                        print("OutputA: 68, OutputB: 68")
+                        self.coms.comunicacion(self.instructions["slow"])
+                    elif(self.state == 1):
+                        if(self.startTurnAround == 0):
+                            self.startTurnAround = time.time()
+                        if((time.time() - self.startTurnAround) < 7):
+                            print("OutputA: 220, OutputB: -150")
+                            self.coms.comunicacion(self.instructions["turnAround"])
+                        else:
+                            self.startTurnAround = 0
+                            self.state = 3
+                    elif(self.state == 2):
+                        print("OutputA: 68, OutputB: 68")
+                        self.coms.comunicacion(self.instructions["slow"])
+                    elif(self.state == 3):
+                        print("OutputA: 0, OutputB: 0.000001")
+                        self.coms.comunicacion(self.instructions["stop"])
 
 
     def finish(self):
