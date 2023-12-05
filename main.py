@@ -160,6 +160,7 @@ class PID:
         self.kp_t = kpt
         self.ki_t = kit
         self.kd_t = kdt
+        self.previous_error = 0.0
         self.previous_errorA= 0.0
         self.previous_errorB= 0.0
         self.integral_angularA = 0.0
@@ -173,9 +174,7 @@ class PID:
         
     def theta_error(self, x, y):
         # Returns the error in the angle theta
-        print(x,y)
-        print(x - self.x_target, self.y_target - y)
-        angle = np.sign(x - self.x_target)*math.atan2(float(self.y_target - y), float(x - self.x_target))
+        angle = math.atan((x - self.x_target)/(self.y_target - y))
         self.theta_err = angle
 
     def lineal_error(self, x, y):
@@ -200,20 +199,15 @@ class PID:
             outputB = self.kp * self.errA + self.ki * self.integral_lineal + self.kd * derivativeA #Copiamos A = B
             self.previous_error = self.errA
             # Limitar la salida
-            outputA = max(outputA, 60)
-            outputB = max(outputB, 60)
+            outputA = max(outputA, 65)
+            outputB = max(outputB, 65)
 
         # Error angular
         else:
             self.integral_lineal = 0
             # Si el error es positivo, el motor A gira más rápido que el B
-            if self.theta_err > 0:
-                self.errA = self.theta_err
-                self.errB = -self.theta_err
-            # Si el error es negativo, el motor B gira más rápido que el A
-            else:
-                self.errA = self.theta_err
-                self.errB = -self.theta_err
+            self.errA = self.theta_err
+            self.errB = -self.theta_err
         
             # PID para el error angular A
             self.integral_angularA += self.errA * delta_time
@@ -225,14 +219,14 @@ class PID:
             self.integral_angularB += self.errB * delta_time
             derivativeB = (self.errB - self.previous_errorB) / delta_time
             outputB = self.kp_t * self.errB + self.ki_t * self.integral_angularB+ self.kd_t * derivativeB
-            self.previous_error = self.errB
+            self.previous_errorB = self.errB
 
             if self.theta_err > 0:
-                outputA = 1.2 *outputA
-                outputB = outputB *1
+                outputA = 1.5 *outputA
+                outputB = outputB *0.9
             else:
-                outputA = outputA * 0.9
-                outputB = outputB * -1.2
+                outputA = outputA * 0.8
+                outputB = outputB * 1.5
             # Limitar la salida
             #if outputA > 0:
             #    outputA = min(outputA, 255)
@@ -246,6 +240,14 @@ class PID:
             #elif outputB < 0:
             #    outputB = max(outputB, -255)
             #    outputB = min(outputB, -120)
+            if outputA > 0:
+                outputA = min(outputA, 255)
+            if outputB > 0:
+                outputB = min(outputB, 255)
+            if outputA < 0:
+                outputA = max(outputA, -255)
+            if outputB < 0:
+                outputB = max(outputB, -255)
         return outputA, outputB
 
 
@@ -285,7 +287,7 @@ class Brain:
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()        
-        self.control = PID(6, 0.03, 0.1, 50,0.018,1,round(
+        self.control = PID(6, 0.03, 0.1, 330,5,6,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
@@ -294,6 +296,7 @@ class Brain:
 
     def do(self):
         running = True
+        explorer_mode = True
         i = 0
         #RPMA_values = []
         #RPMB_values = []
@@ -308,6 +311,7 @@ class Brain:
                 #csv_writer = csv.writer(csvfile)
                 #csv_writer.writerow(csv_header)
             self.last_time = time.time()
+            start_time = time.time()
             while running:
                 if (self.coms.manual_mode):
                     command = input()
@@ -329,6 +333,7 @@ class Brain:
                 else:
                     # Movimiento automático
                     if self.tracker.detect:
+                        explorer_mode = False
                         actual_time = time.time()
                         dt = actual_time - self.last_time
                         outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
@@ -338,6 +343,9 @@ class Brain:
                     else:
                         self.control.integral = 0
                         i = i + 1
+                        if(explorer_mode and ((time.time() - start_time)> 5)):
+                            print("OutputA: 65, OutputB: 65")
+                            self.coms.comunicacion(f"1,65,65")
                         if(i>5):
                             self.coms.comunicacion(self.instructions["stop"])
                     # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
