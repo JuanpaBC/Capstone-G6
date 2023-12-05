@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import os
 
 mostrar_contorno = False
 
@@ -59,6 +60,23 @@ cv2.setTrackbarPos('VMin', 'image', 0)
 hMin = sMin = vMin = hMax = sMax = vMax = 0
 phMin = psMin = pvMin = phMax = psMax = pvMax = 0
 
+try:
+    file_path = os.path.join('valores_lower_upper.txt')
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        lower_line = lines[0].strip().split(': ')[1].replace('[', '').replace(']', '')
+        upper_line = lines[1].strip().split(': ')[1].replace('[', '').replace(']', '')
+
+        # Convierte los valores de string a numpy arrays
+        lower = np.array([int(x) for x in lower_line.split(',')])
+        upper = np.array([int(x) for x in upper_line.split(',')])
+
+
+except FileNotFoundError:
+    # Si el archivo no se encuentra, utiliza valores predeterminados
+    print('Archivo no encontrado, utilizando valores predeterminados')
+    lower = np.array([49, 45, 0], np.uint8)
+    upper = np.array([96, 255, 255], np.uint8)
 
 cap = cv2.VideoCapture(0)
 
@@ -74,6 +92,13 @@ cv2.moveWindow('frame', 30, 100)
 
 # Se establece el método de captura de eventos del mouse
 cv2.setMouseCallback('frame',_mouseEvent)
+
+cv2.setTrackbarPos('HMax', 'image', upper[0])
+cv2.setTrackbarPos('SMax', 'image', upper[1])
+cv2.setTrackbarPos('VMax', 'image', upper[2])
+cv2.setTrackbarPos('HMin', 'image', lower[0])
+cv2.setTrackbarPos('SMin', 'image', lower[1])
+cv2.setTrackbarPos('VMin', 'image', lower[2])
 
 try:
     while True:
