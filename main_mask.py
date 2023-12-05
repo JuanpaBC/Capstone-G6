@@ -35,7 +35,7 @@ class NutsTracker:
         self.max_area = 10000
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(2)
+        self.cap = cv2.VideoCapture(0)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -118,7 +118,7 @@ class Communication:
         self.data = ''
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
@@ -128,6 +128,7 @@ class Communication:
         while True:
             try:
                 if self.arduino.isOpen():
+                    self.arduino.timeout = 1  # Set a timeout of 1 second
                     message = self.arduino.readline().decode('utf-8').strip()
                     if message:
                         self.data = message
@@ -157,6 +158,7 @@ class PID:
         self.previous_error = 0.0
         self.previous_errorA= 0.0
         self.previous_errorB= 0.0
+        self.integral_lineal= 0.0
         self.integral_angularA = 0.0
         self.integral_angularB = 0.0
         self.x_target = x_target

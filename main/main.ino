@@ -87,7 +87,6 @@ void checkDistance()
   distance = duration * 0.034 / 2;
 
   // Print the distance on the Serial Monitor (Ctrl+Shift+M):
-  //Serial.println(distance);
 }
 
 void scoop() {
@@ -288,7 +287,7 @@ int sign(int x) {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(bound);
   pinMode(AC1, INPUT_PULLUP);
   pinMode(AC2, INPUT_PULLUP);
   pinMode(BC1, INPUT_PULLUP);
@@ -309,6 +308,7 @@ void setup() {
 }
 
 void loop() {
+  readSerialPort();
   if(scooping == 0){
     if(distance < 9){
       distance = 12;
@@ -327,7 +327,6 @@ void loop() {
     }
   }
   if ((millis() - t_prev)>= 100) {
-      readSerialPort();
       if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
         stringSplitter(msg, &instruction, &PWM_A_val, &PWM_B_val);
         msg[0] == '\0';
