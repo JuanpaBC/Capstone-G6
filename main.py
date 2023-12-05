@@ -15,13 +15,13 @@ out = cv2.VideoWriter('output.avi', fourcc, 1.0, (640, 480))  # Adjust fps and f
 
 class NutsTracker:
     def __init__(self, model):
-        self.record = False
+        self.record = True
         self.cap = None
         self.image = None
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = True
+        self.show = False
         self.x = -1
         self.y = -1
         self.x_max = 0
@@ -29,9 +29,10 @@ class NutsTracker:
         self.model = model
         self.detect = False
         self.obj = [0, 0]
+        self.camera_num = 0
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -135,7 +136,7 @@ class Communication:
         self.messages = True
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))

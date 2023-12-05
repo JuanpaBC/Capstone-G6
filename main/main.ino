@@ -287,7 +287,7 @@ int sign(int x) {
 }
 
 void setup() {
-  Serial.begin(bound);
+  Serial.begin(baud);
   pinMode(AC1, INPUT_PULLUP);
   pinMode(AC2, INPUT_PULLUP);
   pinMode(BC1, INPUT_PULLUP);

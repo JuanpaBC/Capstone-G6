@@ -12,17 +12,17 @@ import csv
 import os
 
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi', fourcc, 1.0, (640, 480))  # Adjust fps and frame size
+out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
 
 class NutsTracker:
     def __init__(self, model):
-        self.record = False
+        self.record = True
         self.cap = None
         self.image = None
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = True
+        self.show = False
         self.mostrar_contorno = True
         self.x = -1
         self.y = -1
@@ -33,7 +33,7 @@ class NutsTracker:
         self.obj = [0, 0]
         self.min_area = 1000
         self.max_area = 10000
-        self.camera_num = 1
+        self.camera_num = 0
         self.default_lower = [49, 45, 0]
         self.default_upper = [96, 255, 255]
 
@@ -100,6 +100,9 @@ class NutsTracker:
                     self.distancia = "0"
                 if self.show:
                     cv2.imshow('frame', frame)
+                if self.record:
+                    out.write(frame)
+                    
                 if cv2.waitKey(1) & 0xFF == ord('s'):
                     break        
     def stop_tracking(self):
@@ -119,16 +122,17 @@ class Communication:
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
+        self.messages = True
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
 
     def read_and_print_messages(self):
-        while True:
+        while self.messages:
             try:
                 if self.arduino.isOpen():
                     self.arduino.timeout = 1  # Set a timeout of 1 second
@@ -147,6 +151,9 @@ class Communication:
             self.arduino.flush()
             self.arduino.write(mensaje.encode('utf-8'))
             time.sleep(0.1)
+    
+    def stop_messages(self):
+        self.messages = False
 
 
 class PID:
@@ -433,8 +440,11 @@ class Brain:
         # Release the video writer after the main loop
         out.release()
         self.coms.arduino.close()
+        self.coms.stop_messages()
+        self.read_messages_thread.join()
         self.tracker.stop_tracking()
         self.tracker.finish()
+        self.tracking_thread.join()
 
 
 model = YOLO("best_f.pt")
