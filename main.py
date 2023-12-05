@@ -31,7 +31,7 @@ class NutsTracker:
         self.obj = [0, 0]
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -128,7 +128,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM7"
+        self.target_W = "COM4"
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''

@@ -33,9 +33,12 @@ class NutsTracker:
         self.obj = [0, 0]
         self.min_area = 1000
         self.max_area = 10000
+        self.camera_num = 1
+        self.default_lower = [49, 45, 0]
+        self.default_upper = [96, 255, 255]
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -58,8 +61,8 @@ class NutsTracker:
 
             except FileNotFoundError:
                 # Si el archivo no se encuentra, utiliza valores predeterminados
-                lower = np.array([49, 45, 0], np.uint8)
-                upper = np.array([96, 255, 255], np.uint8)
+                lower = np.array(self.default_lower, np.uint8)
+                upper = np.array(self.default_upper, np.uint8)
 
             ret, frame = self.cap.read()
 
@@ -112,7 +115,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM7"
+        self.target_W = "COM4"
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
@@ -251,6 +254,13 @@ class Brain:
 
     def __init__(self, tracker, coms) -> None:
 
+        self.kp = 6
+        self.ki = 0.03
+        self.kd = 0.1
+        self.kp_t = 300
+        self.ki_t = 5
+        self.kd_t = 5
+
         self.tracker = tracker
         self.coms = coms
 
@@ -292,7 +302,7 @@ class Brain:
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()        
-        self.control = PID(6, 0.03, 0.1, 300,5,5,round(
+        self.control = PID(self.kp, self.ki, self.kd, self.kp_t, self.ki_t, self.kd_t,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))

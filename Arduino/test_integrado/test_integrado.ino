@@ -40,7 +40,7 @@ float vueltas_ruedasB;
 float avance;
 int enable = 0;
 bool pressed = true;
-int PWM = 75;
+int PWM = 73;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
 int co = 0;
@@ -115,12 +115,12 @@ void Doblar_derecha(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(ENA,150 + pwm_ref);
+    analogWrite(ENA, 255);
     
     // Avanzar motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(ENB, 150 + pwm_ref);
+    analogWrite(ENB, 100);
 }
 
 // ************** Función para doblar a la izquierda ***************
@@ -130,12 +130,12 @@ void Doblar_izquierda(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(ENA,150 + pwm_ref);
+    analogWrite(ENA,100);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, 150 + pwm_ref);
+    analogWrite(ENB, 255);
 }
 
 void doEncoderA1()
@@ -268,7 +268,7 @@ void loop()
     switch (state)
     {
     case 0:
-        if (avance > 20)
+        if (avance > 10)
         {
             Parar();
             ref_time = micros();
@@ -280,7 +280,7 @@ void loop()
         if ((micros() - ref_time) * 0.000001 > 5)
         {
             state = 2;
-            Atras(PWM+5);
+            Atras(PWM);
         }
         break;
 
