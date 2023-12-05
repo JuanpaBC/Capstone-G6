@@ -132,6 +132,7 @@ class Communication:
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
+        self.messages = True
 
     def begin(self):
         self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
@@ -141,7 +142,7 @@ class Communication:
             time.sleep(1)
 
     def read_and_print_messages(self):
-        while True:
+        while self.messages:
             try:
                 if self.arduino.isOpen():
                     message = self.arduino.readline().decode('utf-8').strip()
@@ -159,6 +160,9 @@ class Communication:
             self.arduino.flush()
             self.arduino.write(mensaje.encode('utf-8'))
             time.sleep(0.1)
+    
+    def stop_messages(self):
+        self.messages = False
 
 
 class PID:
@@ -437,10 +441,14 @@ class Brain:
         # Release the video writer after the main loop
         out.release()
         self.coms.arduino.close()
+        self.coms.stop_messages()
+        self.read_messages_thread.join()
         self.tracker.stop_tracking()
         self.tracker.finish()
+        self.tracking_thread.join()
 
 print("loading model...")
+
 model = YOLO("best_f.pt")
 print("model loaded")
 brain = Brain(NutsTracker(model), Communication())
