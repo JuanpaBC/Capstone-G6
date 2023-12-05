@@ -290,7 +290,6 @@ class Brain:
         self.history = []
 
         self.distance = 1
-        self.state = 0
         self.startTurnAround = 0
         self.instructions = {
             "forward" : "1,200,200\n",
@@ -395,54 +394,35 @@ class Brain:
             self.finish()
 
     def automatic(self):
-        if(False):
-            print(self.scooping)
-            self.scoop_in_progress = True
-            print("OutputA: 0, OutputB: 0")
-            self.coms.comunicacion(self.instructions["stop"])
+        # print(self.scooping)
+        # self.scoop_in_progress = True
+        # print("OutputA: 0, OutputB: 0")
+        # self.coms.comunicacion(self.instructions["stop"])
+        if(self.scoop_in_progress):
+            self.scoop_in_progress = False
+            self.going_back = True
         else:
-            if(self.scoop_in_progress):
-                self.scoop_in_progress = False
+            if self.tracker.detect:
                 self.going_back = True
-            else:
-                if self.going_back:
-                    if len(self.history) > 0:
-                        print("going back")
-                        instruction = self.history.pop(-1)
-                        print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
-                        self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
-                    else:
-                        self.going_back = False
-                elif self.tracker.detect and self.state != 1:
-                    #self.going_back = True
-                    actual_time = time.time()
-                    dt = actual_time - self.last_time
-                    outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
-                    self.history.append([-1*outputA, -1*outputB])
-                    self.last_time = actual_time
-                    print(f"OutputA: {outputA}, OutputB: {outputB}")
-                    self.coms.comunicacion(f"1,{outputA},{outputB}")
+                actual_time = time.time()
+                dt = actual_time - self.last_time
+                outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
+                self.history.append([-1*outputA, -1*outputB])
+                self.last_time = actual_time
+                print(f"OutputA: {outputA}, OutputB: {outputB}")
+                self.coms.comunicacion(f"1,{outputA},{outputB}")
+            elif self.going_back:
+                if len(self.history) > 0:
+                    print("going back")
+                    instruction = self.history.pop(-1)
+                    print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
+                    self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
                 else:
-                    self.control.integral = 0
-                    if(self.state == 0):
-                        print(self.instructions["slow"])
-                        self.coms.comunicacion(self.instructions["slow"])
-                    elif(self.state == 1):
-                        if(self.startTurnAround == 0):
-                            self.startTurnAround = time.time()
-                        if((time.time() - self.startTurnAround) < 7):
-                            print("OutputA: 220, OutputB: -150")
-                            self.coms.comunicacion(self.instructions["turnAround"])
-                        else:
-                            self.startTurnAround = 0
-                            self.state = 2
-                    elif(self.state == 2):
-                        print(self.instructions["slow"])
-                        self.coms.comunicacion(self.instructions["slow"])
-                    elif(self.state == 3):
-                        print("OutputA: 0, OutputB: 0.000001")
-                        self.coms.comunicacion(self.instructions["stop"])
-
+                    self.going_back = False
+            else:
+                self.control.integral = 0
+                print(self.instructions["slow"])
+                self.coms.comunicacion(self.instructions["slow"])
 
     def finish(self):
         # Close the serial port
