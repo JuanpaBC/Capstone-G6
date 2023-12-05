@@ -37,7 +37,7 @@ class NutsTracker:
             print(ret,frame)
             ret, frame = self.cap.read()
         self.y_max, self.x_max, _ = frame.shape
-        self.obj = [int(self.x_max), self.y_max]
+        self.obj = [int(self.x_max / 2), int(self.y_max)]
 
     def track(self):
         while self.tracking:
