@@ -160,17 +160,23 @@ class PID:
         self.kp_t = kpt
         self.ki_t = kit
         self.kd_t = kdt
-        self.previous_error = 0.0
-        self.integral = 0.0
+        self.previous_errorA= 0.0
+        self.previous_errorB= 0.0
+        self.integral_angularA = 0.0
+        self.integral_angularB = 0.0
         self.x_target = x_target
         self.y_target = y_target
         self.tolangle = 7.5
         self.tolpixels = 70
+        self.errA = 0
+        self.errB = 0
         
     def theta_error(self, x, y):
         # Returns the error in the angle theta
-        angle = np.sign(x - self.x_target)*math.atan2(self.y_target - y, x - self.x_target)
-        self.theta_err = angle/abs(angle)
+        print(x,y)
+        print(x - self.x_target, self.y_target - y)
+        angle = np.sign(x - self.x_target)*math.atan2(float(self.y_target - y), float(x - self.x_target))
+        self.theta_err = angle
 
     def lineal_error(self, x, y):
         # Returns the error in the lineal distance
@@ -188,53 +194,58 @@ class PID:
         if self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels):
             
             self.errA = self.lineal_err/2
-            self.integral += self.errA * delta_time
+            self.integral_lineal += self.errA * delta_time
             derivativeA = (self.errA - self.previous_error) / delta_time
-            outputA = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA
-            outputB = self.kp * self.errA + self.ki * self.integral + self.kd * derivativeA #Copiamos A = B
+            outputA = self.kp * self.errA + self.ki * self.integral_lineal + self.kd * derivativeA
+            outputB = self.kp * self.errA + self.ki * self.integral_lineal + self.kd * derivativeA #Copiamos A = B
             self.previous_error = self.errA
+            # Limitar la salida
+            outputA = max(outputA, 60)
+            outputB = max(outputB, 60)
 
         # Error angular
         else:
+            self.integral_lineal = 0
             # Si el error es positivo, el motor A gira más rápido que el B
             if self.theta_err > 0:
-                self.errA = 1.2*self.theta_err
-                self.errB = -1*self.theta_err
+                self.errA = self.theta_err
+                self.errB = -self.theta_err
             # Si el error es negativo, el motor B gira más rápido que el A
             else:
-                self.errA = 0.9*self.theta_err
-                self.errB = -1.2*self.theta_err
+                self.errA = self.theta_err
+                self.errB = -self.theta_err
         
             # PID para el error angular A
-            self.integral += self.errA * delta_time
-            derivativeA = (self.errA - self.previous_error) / delta_time
-            outputA = self.kp_t * self.errA + self.ki_t * self.integral + self.kd_t * derivativeA
-            self.previous_error = self.errA
+            self.integral_angularA += self.errA * delta_time
+            derivativeA = (self.errA - self.previous_errorA) / delta_time
+            outputA = self.kp_t * self.errA + self.ki_t * self.integral_angularA + self.kd_t * derivativeA
+            self.previous_errorA = self.errA
 
             # PID para el error angular B
-            self.integral += self.errB * delta_time
-            derivativeA = (self.errB - self.previous_error) / delta_time
-            outputB = self.kp_t * self.errB + self.ki_t * self.integral + self.kd_t * derivativeA
+            self.integral_angularB += self.errB * delta_time
+            derivativeB = (self.errB - self.previous_errorB) / delta_time
+            outputB = self.kp_t * self.errB + self.ki_t * self.integral_angularB+ self.kd_t * derivativeB
             self.previous_error = self.errB
-        
-        
-        
-        # Limitar la salida
-        if outputA > 0:
-            outputA = min(outputA, 255)
-            outputA = max(outputA, 190)
-        elif outputA < 0:
-            outputA = max(outputA, -255)
-            outputA = min(outputA, -120)
-        if outputB > 0:
-            outputB = min(outputB, 255)
-            outputB = max(outputB, 190)
-        elif outputB < 0:
-            outputB = max(outputB, -255)
-            outputB = min(outputB, -120)
-        if self.lineal_err >0 and (self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels)):
-            outputA = max(outputA, 60)
-            outputB = max(outputB, 60)
+
+            if self.theta_err > 0:
+                outputA = 1.2 *outputA
+                outputB = outputB *1
+            else:
+                outputA = outputA * 0.9
+                outputB = outputB * -1.2
+            # Limitar la salida
+            #if outputA > 0:
+            #    outputA = min(outputA, 255)
+            #    outputA = max(outputA, 190)
+            #elif outputA < 0:
+            #    outputA = max(outputA, -255)
+            #    outputA = min(outputA, -120)
+            #if outputB > 0:
+            #    outputB = min(outputB, 255)
+            #    outputB = max(outputB, 190)
+            #elif outputB < 0:
+            #    outputB = max(outputB, -255)
+            #    outputB = min(outputB, -120)
         return outputA, outputB
 
 
@@ -274,7 +285,7 @@ class Brain:
         self.coms.begin()
         self.tracking_thread.start()
         self.read_messages_thread.start()        
-        self.control = PID(0.6, 0.003, 0.01, round(
+        self.control = PID(6, 0.03, 0.1, 50,0.018,1,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
@@ -368,5 +379,5 @@ class Brain:
         self.tracker.finish()
 
 
-model = YOLO("best.pt")
+model = YOLO("best_f.pt")
 brain = Brain(NutsTracker(model), Communication())
