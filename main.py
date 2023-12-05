@@ -270,6 +270,13 @@ class Brain:
 
     def __init__(self, tracker, coms) -> None:
 
+        self.kp = 6
+        self.ki = 0.03
+        self.kd = 0.1
+        self.kp_t = 300
+        self.ki_t = 5
+        self.kd_t = 5
+
         self.tracker = tracker
         self.coms = coms
 
@@ -315,7 +322,7 @@ class Brain:
         print("Track thread Started...")
         self.read_messages_thread.start()
         print("read message thread Started...")
-        self.control = PID(6, 0.03, 0.1, 300,5,5,round(
+        self.control = PID(self.kp, self.ki, self.kd, self.kp_t, self.ki_t, self.kd_t,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
