@@ -35,7 +35,9 @@ class NutsTracker:
         self.camera_num = 0
         self.default_lower = [3,162,53]
         self.default_upper = [47,255,255]
+    
     def initiateVideo(self):
+        print("Initiating video.")
         self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
         while (not ret):
@@ -102,11 +104,13 @@ class NutsTracker:
                     out.write(frame)
                     
                 if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break        
+                    break    
+        print("Tracking stopped.")    
     def stop_tracking(self):
         self.tracking = False
 
     def finish(self):
+        print("Windows released.")
         self.cap.release()
         cv2.destroyAllWindows()
 
@@ -118,7 +122,7 @@ class Communication:
         self.starts = False
         self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
-        self.baud = 115200
+        self.baud = 9600
         self.data = ''
         self.messages = True
 
@@ -140,6 +144,7 @@ class Communication:
                         print(f'Recibiendo mensaje: {message}')
             except Exception as e:
                 print(f"Error reading message: {e}")
+        print("Messages stopped.")
 
     def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
@@ -313,9 +318,12 @@ class Brain:
         self.tracker.initiateVideo()
         self.coms.begin()
         self.tracking_thread.start()
-        self.read_messages_thread.start()        
+        print("Tracking thread started.")
+        self.read_messages_thread.start()
+        print("Messages thread started.")
         self.control = PID(self.kp, self.ki, self.kd, self.kp_t, self.ki_t, self.kd_t,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
+        print("Control instantiated.")
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
 
@@ -442,12 +450,16 @@ class Brain:
     def finish(self):
         # Close the serial port
         # Release the video writer after the main loop
+        print("Finishing program.")
         out.release()
+        print("Video released.")
         self.coms.arduino.close()
+        print("Arduino closed.")
         self.coms.stop_messages()
         self.read_messages_thread.join()
         self.tracker.stop_tracking()
         self.tracker.finish()
         self.tracking_thread.join()
+        print("Program finished.")
 
 brain = Brain(NutsTracker(), Communication())
