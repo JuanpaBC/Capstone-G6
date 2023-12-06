@@ -21,7 +21,7 @@ class NutsTracker:
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = False
+        self.show = True
         self.x = -1
         self.y = -1
         self.x_max = 0
@@ -29,7 +29,7 @@ class NutsTracker:
         self.model = model
         self.detect = False
         self.obj = [0, 0]
-        self.camera_num = 0
+        self.camera_num = 2
 
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)

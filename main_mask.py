@@ -32,7 +32,7 @@ class NutsTracker:
         self.obj = [0, 0]
         self.min_area = 1000
         self.max_area = 10000
-        self.camera_num = 0
+        self.camera_num = 2
         self.default_lower = [3,162,53]
         self.default_upper = [47,255,255]
     def initiateVideo(self):
@@ -335,7 +335,7 @@ class Brain:
                 #csv_writer.writerow(csv_header)
             self.last_time = time.time()
             start_time = time.time()
-            while time.time() - start_time < 60000:
+            while time.time() - start_time < 60:
                 if (self.coms.manual_mode):
                     command = input()
                     if command == 'a':
