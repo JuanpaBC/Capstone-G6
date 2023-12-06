@@ -245,7 +245,7 @@ void readSerialPort()
 {
   memset(msg, 0, sizeof(msg));  // Clear the msg array
   if (Serial.available()) {
-    delay(20);
+    delay(30);
     int i = 0;
     while (Serial.available() > 0 && i < sizeof(msg) - 1) {
       msg[i++] = Serial.read();

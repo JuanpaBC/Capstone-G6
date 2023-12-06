@@ -239,13 +239,13 @@ class PID:
             #    outputB = max(outputB, -255)
             #    outputB = min(outputB, -120)
             if outputA > 0:
-                outputA = min(outputA, 255)
+                outputA = min(outputA, 230)
             if outputB > 0:
-                outputB = min(outputB, 255)
+                outputB = min(outputB, 230)
             if outputA < 0:
-                outputA = max(outputA, -255)
+                outputA = max(outputA, -230)
             if outputB < 0:
-                outputB = max(outputB, -255)
+                outputB = max(outputB, -230)
         return outputA, outputB
 
 
