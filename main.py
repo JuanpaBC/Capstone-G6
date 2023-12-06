@@ -29,7 +29,7 @@ class NutsTracker:
         self.model = model
         self.detect = False
         self.obj = [0, 0]
-        self.camera_num = 1
+        self.camera_num = 0
 
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)
@@ -152,7 +152,8 @@ class Communication:
                     message = self.arduino.readline().decode('utf-8').strip()
                     if message:
                         self.data = message
-                        print(f'Recibiendo mensaje: {message}')
+                        
+                        #print(f'Recibiendo mensaje: {message}')
                         # self.arduino.flush()
             except Exception as e:
                 print(f"Error reading message: {e}")
@@ -210,6 +211,7 @@ class PID:
         # Error lineal
         if self.theta_err == 0 or (abs(x-self.x_target) < self.tolpixels):
             self.integral_angularA = 0
+            self.integral_angularB = 0
             self.errA = self.lineal_err/2
             self.integral_lineal += self.errA * delta_time
             derivativeA = (self.errA - self.previous_error) / delta_time
@@ -217,8 +219,8 @@ class PID:
             outputB = self.kp * self.errA + self.ki * self.integral_lineal + self.kd * derivativeA #Copiamos A = B
             self.previous_error = self.errA
             # Limitar la salida
-            outputA = max(outputA, 65)
-            outputB = max(outputB, 65)
+            outputA = max(outputA, 73)
+            outputB = max(outputB, 73)
 
         # Error angular
         else:
@@ -226,7 +228,7 @@ class PID:
             # Si el error es positivo, el motor A gira más rápido que el B
             self.errA = self.theta_err
             self.errB = -self.theta_err
-            print(self.theta_err)
+            print(f"error angular: {self.theta_err}")
             # PID para el error angular A
             self.integral_angularA += self.errA * delta_time
             derivativeA = (self.errA - self.previous_errorA) / delta_time
@@ -244,7 +246,7 @@ class PID:
                 outputB = outputB *0.9
             else:
                 outputA = outputA * 0.8
-                outputB = outputB * 1.5
+                outputB = outputB * 1
             # Limitar la salida
             #if outputA > 0:
             #    outputA = min(outputA, 255)
@@ -260,8 +262,10 @@ class PID:
             #    outputB = min(outputB, -120)
             if outputA > 0:
                 outputA = min(outputA, 255)
+                outputA = max(outputA, 150)
             if outputB > 0:
                 outputB = min(outputB, 255)
+                outputB = max(outputB, 150)
             if outputA < 0:
                 outputA = max(outputA, -255)
             if outputB < 0:
@@ -276,7 +280,7 @@ class Brain:
         self.kp = 6
         self.ki = 0.03
         self.kd = 0.1
-        self.kp_t = 300
+        self.kp_t = 295
         self.ki_t = 5
         self.kd_t = 5
 
@@ -302,7 +306,7 @@ class Brain:
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
             "stop" : "1,0,0\n",
-            "slow" : "1,74,74\n"
+            "slow" : "1,73,73\n"
         }
         self.scoop_in_progress = False
         self.scooping = 0

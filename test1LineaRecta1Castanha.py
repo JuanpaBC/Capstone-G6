@@ -314,10 +314,7 @@ class Brain:
                         print(f"OutputA: {outputA}, OutputB: {outputB}")
                         self.coms.comunicacion(f"1,{outputA},{outputB}")
                     else:
-                        if(self.explorer_mode and time.time()-startTime > 5):
-                            self.coms.comunicacion("1,58,58")
-                        else:
-                            self.coms.comunicacion(self.instructions["stop"])
+                        self.coms.comunicacion(self.instructions["stop"])
                         self.control.integral = 0
                     # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
