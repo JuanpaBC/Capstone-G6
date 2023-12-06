@@ -343,7 +343,7 @@ class Brain:
                 #csv_writer.writerow(csv_header)
             self.last_time = time.time()
             start_time = time.time()
-            while time.time() - start_time < 60:
+            while time.time() - start_time < 60000:
                 if (self.coms.manual_mode):
                     command = input()
                     if command == 'a':
@@ -363,7 +363,7 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     
-                    if(((time.time() - start_time) > 20)):
+                    if(((time.time() - start_time) > 20000)):
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
