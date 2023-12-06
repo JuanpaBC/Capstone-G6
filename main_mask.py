@@ -15,7 +15,7 @@ fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
 
 class NutsTracker:
-    def __init__(self, model):
+    def __init__(self):
         self.record = True
         self.cap = None
         self.image = None
@@ -28,15 +28,16 @@ class NutsTracker:
         self.y = -1
         self.x_max = 0
         self.y_max = 0
-        self.model = model
         self.detect = False
         self.obj = [0, 0]
         self.min_area = 1000
         self.max_area = 10000
-        self.camera_num = 0
-        self.default_lower = [0, 157,  0]
-        self.default_upper = [ 48, 247, 142]
+        self.camera_num = 2
+        self.default_lower = [3,162,53]
+        self.default_upper = [47,255,255]
+    
     def initiateVideo(self):
+        print("Initiating video.")
         self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
         while (not ret):
@@ -103,11 +104,13 @@ class NutsTracker:
                     out.write(frame)
                     
                 if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break        
+                    break    
+        print("Tracking stopped.")    
     def stop_tracking(self):
         self.tracking = False
 
     def finish(self):
+        print("Windows released.")
         self.cap.release()
         cv2.destroyAllWindows()
 
@@ -141,6 +144,7 @@ class Communication:+++++++++++++-----------------+
                         print(f'Recibiendo mensaje: {message}')
             except Exception as e:
                 print(f"Error reading message: {e}")
+        print("Messages stopped.")
 
     def comunicacion(self, mensaje):
         # Manda la distancia medida y espera respuesta del Arduino.
@@ -151,6 +155,7 @@ class Communication:+++++++++++++-----------------+
             time.sleep(0.1)
     
     def stop_messages(self):
+        self.comunicacion('1,0,0')
         self.messages = False
 
 
@@ -189,7 +194,6 @@ class PID:
     def update(self, delta_time, x, y):
         self.theta_error(x, y)
         self.lineal_error(x, y)
-        print(self.theta_err)
         
         #PID para lineal y angular separados con distintos kp, ki y kd
         
@@ -261,7 +265,7 @@ class Brain:
 
         self.kp = 6
         self.ki = 0.03
-        self.kd = 0.1
+        self.kd = 0.15
         self.kp_t = 300
         self.ki_t = 5
         self.kd_t = 5
@@ -290,13 +294,21 @@ class Brain:
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
             "stop" : "1,0,0\n",
-            "slow" : "1,68,68\n"
+            "slow" : "1,73,73\n"
         }
         self.scoop_in_progress = False
         self.scooping = 0
         self.last_time = 0.0
         self.begin()
         self.do()
+
+    
+    def check_timeout(self):
+        # Check if the timeout duration has passed
+        elapsed_time = time.time() - self.start_time
+        if elapsed_time > self.timeout_duration:
+            print("Timeout reached. Stopping the tracking and finishing.")
+            self.finish()
 
     def track_wrapper(self):
         # This function is used to run the track() method in a separate thread.
@@ -306,9 +318,12 @@ class Brain:
         self.tracker.initiateVideo()
         self.coms.begin()
         self.tracking_thread.start()
-        self.read_messages_thread.start()        
+        print("Tracking thread started.")
+        self.read_messages_thread.start()
+        print("Messages thread started.")
         self.control = PID(self.kp, self.ki, self.kd, self.kp_t, self.ki_t, self.kd_t,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
+        print("Control instantiated.")
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
 
@@ -328,7 +343,7 @@ class Brain:
                 #csv_writer.writerow(csv_header)
             self.last_time = time.time()
             start_time = time.time()
-            while running:
+            while time.time() - start_time < 80:
                 if (self.coms.manual_mode):
                     command = input()
                     if command == 'a':
@@ -348,14 +363,13 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     
-                    if(((time.time() - start_time) > 15)):
+                    if(((time.time() - start_time) > 20)):
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
                 if(len(self.coms.data.split(','))==4 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
                     splitData = self.coms.data.split(',')
-                    
                     timestamp = splitData[0]
                     aData = splitData[1]
                     bData = splitData[2]
@@ -385,6 +399,7 @@ class Brain:
             self.finish()
 
     def automatic(self):
+        # si scoopea, detente
         if(self.scooping != 0):
             self.scoop_in_progress = True
             print("OutputA: 0, OutputB: 0")
@@ -398,7 +413,7 @@ class Brain:
                     if len(self.history) > 0:
                         instruction = self.history.pop(-1)
                         print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
-                        self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
+                        self.coms.comunicacion(f"-1,{instruction[0]},{instruction[1]}")
                     else:
                         self.going_back = False
                 elif self.tracker.detect and self.state != 1:
@@ -435,14 +450,16 @@ class Brain:
     def finish(self):
         # Close the serial port
         # Release the video writer after the main loop
+        print("Finishing program.")
         out.release()
+        print("Video released.")
         self.coms.arduino.close()
+        print("Arduino closed.")
         self.coms.stop_messages()
         self.read_messages_thread.join()
         self.tracker.stop_tracking()
         self.tracker.finish()
         self.tracking_thread.join()
+        print("Program finished.")
 
-
-model = YOLO("best_f.pt")
-brain = Brain(NutsTracker(model), Communication())
+brain = Brain(NutsTracker(), Communication())

@@ -29,10 +29,13 @@ class NutsTracker:
         self.model = model
         self.detect = False
         self.obj = [0, 0]
-        self.camera_num = 0
+        self.camera_num = 1
 
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)
+        while not self.cap.isOpened():
+            print("Error opening video")
+            self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
@@ -150,7 +153,7 @@ class Communication:
                     if message:
                         self.data = message
                         print(f'Recibiendo mensaje: {message}')
-                        self.arduino.flush()
+                        # self.arduino.flush()
             except Exception as e:
                 print(f"Error reading message: {e}")
 

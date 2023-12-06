@@ -78,7 +78,7 @@ except FileNotFoundError:
     lower = np.array([49, 45, 0], np.uint8)
     upper = np.array([96, 255, 255], np.uint8)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 # azulBajo = np.array([100, 100, 20], np.uint8)
 # azulAlto = np.array([125, 255, 255], np.uint8)
