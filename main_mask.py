@@ -34,9 +34,8 @@ class NutsTracker:
         self.min_area = 1000
         self.max_area = 10000
         self.camera_num = 0
-        self.default_lower = [19, 32, 10]
-        self.default_upper = [59, 127, 220]
-
+        self.default_lower = [0, 157,  0]
+        self.default_upper = [ 48, 247, 142]
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
@@ -48,21 +47,21 @@ class NutsTracker:
 
     def track(self):
         while self.tracking:
-            try:
-                file_path = os.path.join('vision', 'valores_lower_upper.txt')
-                with open(file_path, 'r') as file:
-                    lines = file.readlines()
-                    lower_line = lines[0].strip().split(': ')[1].replace('[', '').replace(']', '')
-                    upper_line = lines[1].strip().split(': ')[1].replace('[', '').replace(']', '')
+            #try:
+                #file_path = os.path.join('vision', 'valores_lower_upper.txt')
+                #with open(file_path, 'r') as file:
+                 #   lines = file.readlines()
+                  #  lower_line = lines[0].strip().split(': ')[1].replace('[', '').replace(']', '')
+                   # upper_line = lines[1].strip().split(': ')[1].replace('[', '').replace(']', '')
 
                     # Convierte los valores de string a numpy arrays
-                    lower = np.array([int(x) for x in lower_line.split(',')])
-                    upper = np.array([int(x) for x in upper_line.split(',')])
+                    #lower = np.array([int(x) for x in lower_line.split(',')])
+                   # upper = np.array([int(x) for x in upper_line.split(',')])
 
-            except FileNotFoundError:
-                # Si el archivo no se encuentra, utiliza valores predeterminados
-                lower = np.array(self.default_lower, np.uint8)
-                upper = np.array(self.default_upper, np.uint8)
+            #except FileNotFoundError:
+            #    # Si el archivo no se encuentra, utiliza valores predeterminados
+            lower = np.array(self.default_lower, np.uint8)
+            upper = np.array(self.default_upper, np.uint8)
 
             ret, frame = self.cap.read()
 
@@ -118,7 +117,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM4"
+        self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
