@@ -34,8 +34,8 @@ class NutsTracker:
         self.min_area = 1000
         self.max_area = 10000
         self.camera_num = 0
-        self.default_lower = [49, 45, 0]
-        self.default_upper = [96, 255, 255]
+        self.default_lower = [19, 32, 10]
+        self.default_upper = [59, 127, 220]
 
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)
