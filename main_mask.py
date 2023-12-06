@@ -112,7 +112,7 @@ class NutsTracker:
         cv2.destroyAllWindows()
 
 
-class Communication:
+class Communication:+++++++++++++-----------------+
     def __init__(self) -> None:
         self.mostrar_contorno = False
         self.manual_mode = False

@@ -21,7 +21,7 @@ class NutsTracker:
         self.distancia = "0"
         self.area = "0"
         self.tracking = True
-        self.show = False
+        self.show = True
         self.x = -1
         self.y = -1
         self.x_max = 0
@@ -129,7 +129,7 @@ class Communication:
         self.mostrar_contorno = False
         self.manual_mode = False
         self.starts = False
-        self.target_W = "COM4"
+        self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
@@ -413,18 +413,10 @@ class Brain:
                 self.last_time = actual_time
                 print(f"OutputA: {outputA}, OutputB: {outputB}")
                 self.coms.comunicacion(f"1,{outputA},{outputB}")
-            elif self.going_back:
-                if len(self.history) > 0:
-                    print("going back")
-                    instruction = self.history.pop(-1)
-                    print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
-                    self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
-                else:
-                    self.going_back = False
             else:
                 self.control.integral = 0
-                print(self.instructions["slow"])
-                self.coms.comunicacion(self.instructions["slow"])
+                print(self.instructions["stop"])
+                self.coms.comunicacion(self.instructions["stop"])
 
     def finish(self):
         # Close the serial port
