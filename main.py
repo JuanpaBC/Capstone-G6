@@ -29,10 +29,13 @@ class NutsTracker:
         self.model = model
         self.detect = False
         self.obj = [0, 0]
-        self.camera_num = 2
+        self.camera_num = 1
 
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)
+        while not self.cap.isOpened():
+            print("Error opening video")
+            self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
