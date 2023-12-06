@@ -190,7 +190,6 @@ class PID:
     def update(self, delta_time, x, y):
         self.theta_error(x, y)
         self.lineal_error(x, y)
-        print(self.theta_err)
         
         #PID para lineal y angular separados con distintos kp, ki y kd
         
@@ -291,7 +290,7 @@ class Brain:
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
             "stop" : "1,0,0\n",
-            "slow" : "1,68,68\n"
+            "slow" : "1,70,70\n"
         }
         self.scoop_in_progress = False
         self.scooping = 0
@@ -356,7 +355,6 @@ class Brain:
                 if(len(self.coms.data.split(','))==4 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
                     splitData = self.coms.data.split(',')
-                    
                     timestamp = splitData[0]
                     aData = splitData[1]
                     bData = splitData[2]

@@ -150,7 +150,7 @@ class Communication:
                     if message:
                         self.data = message
                         print(f'Recibiendo mensaje: {message}')
-                        self.arduino.flush()
+                        # self.arduino.flush()
             except Exception as e:
                 print(f"Error reading message: {e}")
 
