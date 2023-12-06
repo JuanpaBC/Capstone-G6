@@ -75,6 +75,8 @@ while(True):
 	# Se definen los límites de color permitidos para la detección de objetos
 	LowerColor1 = color1_hsv + LowerColorError
 	UpperColor1 = color1_hsv + UpperColorError	
+	print("LowerColor1: ",LowerColor1)
+	print("UpperColor1: ",UpperColor1)
 
 	# Se aplica una máscara de color para detectar objetos
 	Color1Mask = cv2.inRange(hsv, LowerColor1, UpperColor1)
