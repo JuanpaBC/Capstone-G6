@@ -139,7 +139,6 @@ class Communication:
                     if message:
                         self.data = message
                         print(f'Recibiendo mensaje: {message}')
-                        self.arduino.flush()
             except Exception as e:
                 print(f"Error reading message: {e}")
 
@@ -387,7 +386,6 @@ class Brain:
 
     def automatic(self):
         if(self.scooping != 0):
-            print(self.scooping)
             self.scoop_in_progress = True
             print("OutputA: 0, OutputB: 0")
             self.coms.comunicacion(self.instructions["stop"])

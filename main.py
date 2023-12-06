@@ -136,7 +136,7 @@ class Communication:
         self.messages = True
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
@@ -344,6 +344,7 @@ class Brain:
             start_time = time.time()
             while running:
                 if (self.coms.manual_mode):
+                    print("Manual")
                     command = input()
                     if command == 'a':
                         self.coms.comunicacion(self.instructions["left"])
@@ -394,6 +395,7 @@ class Brain:
             self.finish()
 
     def automatic(self):
+        print("automatic")
         # print(self.scooping)
         # self.scoop_in_progress = True
         # print("OutputA: 0, OutputB: 0")
