@@ -15,7 +15,7 @@ fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
 
 class NutsTracker:
-    def __init__(self, model):
+    def __init__(self):
         self.record = True
         self.cap = None
         self.image = None
@@ -28,14 +28,13 @@ class NutsTracker:
         self.y = -1
         self.x_max = 0
         self.y_max = 0
-        self.model = model
         self.detect = False
         self.obj = [0, 0]
         self.min_area = 1000
         self.max_area = 10000
         self.camera_num = 0
-        self.default_lower = [0, 157,  0]
-        self.default_upper = [ 48, 247, 142]
+        self.default_lower = [3,162,53]
+        self.default_upper = [47,255,255]
     def initiateVideo(self):
         self.cap = cv2.VideoCapture(self.camera_num)
         ret, frame = self.cap.read()
@@ -119,7 +118,7 @@ class Communication:
         self.starts = False
         self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
-        self.baud = 9600
+        self.baud = 115200
         self.data = ''
         self.messages = True
 
@@ -151,6 +150,7 @@ class Communication:
             time.sleep(0.1)
     
     def stop_messages(self):
+        self.comunicacion('1,0,0')
         self.messages = False
 
 
@@ -260,7 +260,7 @@ class Brain:
 
         self.kp = 6
         self.ki = 0.03
-        self.kd = 0.1
+        self.kd = 0.15
         self.kp_t = 300
         self.ki_t = 5
         self.kd_t = 5
@@ -289,13 +289,21 @@ class Brain:
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
             "stop" : "1,0,0\n",
-            "slow" : "1,70,70\n"
+            "slow" : "1,73,73\n"
         }
         self.scoop_in_progress = False
         self.scooping = 0
         self.last_time = 0.0
         self.begin()
         self.do()
+
+    
+    def check_timeout(self):
+        # Check if the timeout duration has passed
+        elapsed_time = time.time() - self.start_time
+        if elapsed_time > self.timeout_duration:
+            print("Timeout reached. Stopping the tracking and finishing.")
+            self.finish()
 
     def track_wrapper(self):
         # This function is used to run the track() method in a separate thread.
@@ -327,7 +335,7 @@ class Brain:
                 #csv_writer.writerow(csv_header)
             self.last_time = time.time()
             start_time = time.time()
-            while running:
+            while time.time() - start_time < 60:
                 if (self.coms.manual_mode):
                     command = input()
                     if command == 'a':
@@ -347,7 +355,7 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     
-                    if(((time.time() - start_time) > 15)):
+                    if(((time.time() - start_time) > 20)):
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
@@ -383,6 +391,7 @@ class Brain:
             self.finish()
 
     def automatic(self):
+        # si scoopea, detente
         if(self.scooping != 0):
             self.scoop_in_progress = True
             print("OutputA: 0, OutputB: 0")
@@ -396,7 +405,7 @@ class Brain:
                     if len(self.history) > 0:
                         instruction = self.history.pop(-1)
                         print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
-                        self.coms.comunicacion(f"1,{instruction[0]},{instruction[1]}")
+                        self.coms.comunicacion(f"-1,{instruction[0]},{instruction[1]}")
                     else:
                         self.going_back = False
                 elif self.tracker.detect and self.state != 1:
@@ -441,6 +450,4 @@ class Brain:
         self.tracker.finish()
         self.tracking_thread.join()
 
-
-model = YOLO("best_f.pt")
-brain = Brain(NutsTracker(model), Communication())
+brain = Brain(NutsTracker(), Communication())
