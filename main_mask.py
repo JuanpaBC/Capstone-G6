@@ -30,9 +30,9 @@ class NutsTracker:
         self.y_max = 0
         self.detect = False
         self.obj = [0, 0]
-        self.min_area = 1000
-        self.max_area = 10000
-        self.camera_num = 2
+        self.min_area = 500
+        self.max_area = 20000
+        self.camera_num = 0
         self.default_lower = [3,162,53]
         self.default_upper = [47,255,255]
     
@@ -122,7 +122,7 @@ class Communication:
         self.starts = False
         self.target_W = "COM7"
         self.target_L = '/dev/ttyACM0'
-        self.baud = 115200
+        self.baud = 9600
         self.data = ''
         self.messages = True
 
@@ -134,16 +134,6 @@ class Communication:
             time.sleep(1)
 
     def read_and_print_messages(self):
-        while self.messages:
-            try:
-                if self.arduino.isOpen():
-                    self.arduino.timeout = 1  # Set a timeout of 1 second
-                    message = self.arduino.readline().decode('utf-8').strip()
-                    if message:
-                        self.data = message
-                        print(f'Recibiendo mensaje: {message}')
-            except Exception as e:
-                print(f"Error reading message: {e}")
         print("Messages stopped.")
 
     def comunicacion(self, mensaje):
@@ -400,51 +390,35 @@ class Brain:
 
     def automatic(self):
         # si scoopea, detente
-        if(self.scooping != 0):
-            self.scoop_in_progress = True
-            print("OutputA: 0, OutputB: 0")
-            self.coms.comunicacion(self.instructions["stop"])
+        if self.tracker.detect:
+            #self.going_back = True
+            actual_time = time.time()
+            dt = actual_time - self.last_time
+            outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
+            self.history.append([-1*outputA, -1*outputB])
+            self.last_time = actual_time
+            print(f"OutputA: {outputA}, OutputB: {outputB}")
+            self.coms.comunicacion(f"1,{outputA},{outputB}")
         else:
-            if(self.scoop_in_progress):
-                self.scoop_in_progress = False
-                self.going_back = True
-            else:
-                if self.going_back:
-                    if len(self.history) > 0:
-                        instruction = self.history.pop(-1)
-                        print(f"OutputA: {instruction[0]}, OutputB: {instruction[1]}")
-                        self.coms.comunicacion(f"-1,{instruction[0]},{instruction[1]}")
-                    else:
-                        self.going_back = False
-                elif self.tracker.detect and self.state != 1:
-                    #self.going_back = True
-                    actual_time = time.time()
-                    dt = actual_time - self.last_time
-                    outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
-                    self.history.append([-1*outputA, -1*outputB])
-                    self.last_time = actual_time
-                    print(f"OutputA: {outputA}, OutputB: {outputB}")
-                    self.coms.comunicacion(f"1,{outputA},{outputB}")
+            self.control.integral = 0
+            if(self.state == 0):
+                print("OutputA: 68, OutputB: 68")
+                self.coms.comunicacion(self.instructions["slow"])
+            elif(self.state == 1):
+                if(self.startTurnAround == 0):
+                    self.startTurnAround = time.time()
+                if((time.time() - self.startTurnAround) < 7):
+                    print("OutputA: 220, OutputB: -150")
+                    self.coms.comunicacion(self.instructions["turnAround"])
                 else:
-                    self.control.integral = 0
-                    if(self.state == 0):
-                        print("OutputA: 68, OutputB: 68")
-                        self.coms.comunicacion(self.instructions["slow"])
-                    elif(self.state == 1):
-                        if(self.startTurnAround == 0):
-                            self.startTurnAround = time.time()
-                        if((time.time() - self.startTurnAround) < 7):
-                            print("OutputA: 220, OutputB: -150")
-                            self.coms.comunicacion(self.instructions["turnAround"])
-                        else:
-                            self.startTurnAround = 0
-                            self.state = 3
-                    elif(self.state == 2):
-                        print("OutputA: 68, OutputB: 68")
-                        self.coms.comunicacion(self.instructions["slow"])
-                    elif(self.state == 3):
-                        print("OutputA: 0, OutputB: 0.000001")
-                        self.coms.comunicacion(self.instructions["stop"])
+                    self.startTurnAround = 0
+                    self.state = 3
+            elif(self.state == 2):
+                print("OutputA: 68, OutputB: 68")
+                self.coms.comunicacion(self.instructions["slow"])
+            elif(self.state == 3):
+                print("OutputA: 0, OutputB: 0.000001")
+                self.coms.comunicacion(self.instructions["stop"])
 
 
     def finish(self):

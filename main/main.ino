@@ -355,25 +355,6 @@ void loop() {
       Pos_x = Pos_x + (Vel_x*dt)/1000;
       Pos_y = Pos_y + (Vel_y*dt)/1000;
 
-      Serial.print(t);
-      Serial.print(", ");
-      Serial.print("EncoderCountA: ");
-      Serial.print(EncoderCountA);
-      Serial.print(" | RPMA: ");
-      Serial.print(RPM_A);
-      Serial.print(", ");
-      
-      
-
-      Serial.print("EncoderCountB: ");
-      Serial.print(EncoderCountB);
-      Serial.print(" | RPM_B: ");
-      Serial.print(RPM_B);
-
-      Serial.print(", Pala: ");
-      Serial.print(scooping);
-      Serial.println("");
-
       //Serial.print("POSX: ");
       //Serial.print(Pos_x);
       //Serial.print("POSY: ");
