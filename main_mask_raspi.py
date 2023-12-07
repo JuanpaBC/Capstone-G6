@@ -6,17 +6,21 @@ import time
 # import keyboard
 import threading
 from picamera2 import Picamera2, Preview
-
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
-
+import multiprocessing
+centerX = multiprocessing.Value('i', 0)
+centerY = multiprocessing.Value('i', 0)
+RPMAG =  multiprocessing.Value('i', 0)
+RPMBG =  multiprocessing.Value('i', 0)
+detect = multiprocessing.Value('i', 0)
 class NutsTracker:
-    def __init__(self):
+    def __init__(self, resolution=(320, 240), framerate=30):
         self.record = True
-        self.cap = None
-        self.image = None
-        self.distancia = "0"
-        self.area = "0"
+        # initialize the frame and the variable used to indicate
+        # if the thread should be stopped
+        self.resolution = resolution
+        self.framerate = framerate
+        self.frame = None
+        self.stopped = False
         self.tracking = True
         self.show = False
         self.mostrar_contorno = True
@@ -26,96 +30,103 @@ class NutsTracker:
         self.y_max = 0
         self.detect = False
         self.obj = [0, 0]
-        self.min_area = 500
-        self.max_area = 20000
-        self.camera_num = 0
-        self.default_lower = [3,162,53]
-        self.default_upper = [47,255,255]
+        self.min_area = 5
+        self.max_area = 20000000
+        self.default_lower = np.array([3, 162, 53])
+        self.default_upper = np.array([47, 255, 255])
+
     
     def initiateVideo(self):
         print("Initiating video.")
+        try:
+            self.camera = Picamera2()  # Change this line
+            self.camera.resolution = self.resolution
+            self.camera.framerate = self.framerate
+
+            #self.camera.start_preview(Preview.QTGL)
+
+            preview_config = self.camera.create_preview_configuration()
+            self.camera.configure(preview_config)
+            
+            #self.camera.start_preview(Preview.QT)
+            self.camera.start()
+            if(self.record):
+
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                self.out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
+            # self.rawCapture = Picamera2.capture_array("raw")
+            # self.stream = self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True)
+            # Other camera setup code...
+            # start the thread to read frames from the video stream
+            self.x_max = self.camera.resolution[0]
+            self.y_max = self.camera.resolution[1]
+            time.sleep(2)
+            threading.Thread(target=self.track, args=()).start()
+            return self
+        except Exception as e:
+            print(f"Error initializing camera: {e}")
         
-        #self.cap = cv2.VideoCapture(self.camera_num)
-        #ret, frame = self.cap.read()
-        #while (not ret):
-        #    print(ret,frame)
-        #    ret, frame = self.cap.read()
-        #self.y_max, self.x_max, _ = frame.shape
-        #self.obj = [int(self.x_max / 2), int(self.y_max)]
-        self.cap  = Picamera2()
-        self.cap .start_preview(Preview.QTGL)
-
-        preview_config = self.cap.create_preview_configuration()
-        self.cap.configure(preview_config)
-
-        self.cap()
-
     def track(self):
-        while self.tracking:
-            #try:
-                #file_path = os.path.join('vision', 'valores_lower_upper.txt')
-                #with open(file_path, 'r') as file:
-                 #   lines = file.readlines()
-                  #  lower_line = lines[0].strip().split(': ')[1].replace('[', '').replace(']', '')
-                   # upper_line = lines[1].strip().split(': ')[1].replace('[', '').replace(']', '')
-
-                    # Convierte los valores de string a numpy arrays
-                    #lower = np.array([int(x) for x in lower_line.split(',')])
-                   # upper = np.array([int(x) for x in upper_line.split(',')])
-
-            #except FileNotFoundError:
-            #    # Si el archivo no se encuentra, utiliza valores predeterminados
-            lower = np.array(self.default_lower, np.uint8)
-            upper = np.array(self.default_upper, np.uint8)
-
-            ret, frame = self.cap.read()
-
-            if ret:
-                frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                mask = cv2.inRange(frameHSV, lower, upper)
+        # keep looping infinitely until the thread is stopped
+        while not self.stopped:
+            try:
+                # Capture frame from the camera
+                self.frame = self.camera.capture_array()
+                frameHSV = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+                mask = cv2.inRange(frameHSV, self.default_lower, self.default_upper)
                 contornos, _ = cv2.findContours(
                     mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
                 )
-                a = False
+                a = 0
                 for c in contornos:
                     area = cv2.contourArea(c)
                     if (area >= self.min_area) and (self.max_area >= area):
-                        a = True
+                        a = 1
                         M = cv2.moments(c)
                         if M["m00"] == 0:
                             M["m00"] = 1
                         self.x = int(M["m10"] / M["m00"])
                         self.y = int(M["m01"] / M["m00"])
-                        cv2.circle(frame, (self.x, self.y), 7, (255, 0, 255), -1)
+                        centerX.value = self.x
+                        centerY.value = self.y
+                        cv2.circle(self.frame, (self.x, self.y), 7, (255, 0, 255), -1)
                         font = cv2.FONT_HERSHEY_SIMPLEX
-                        cv2.putText(frame, '{},{}'.format(
+                        cv2.putText(self.frame, '{},{}'.format(
                             self.x, self.y), (self.x+10, self.y), font, 0.75, (255, 0, 255), 1, cv2.LINE_AA)
                         nuevoContorno = cv2.convexHull(c)
-                        cv2.circle(frame, (self.x, self.y), max(
+                        cv2.circle(self.frame, (self.x, self.y), max(
                             nuevoContorno[:, 0, 0].tolist()) - self.x, (0, 0, 255), 2)
 
                         if self.mostrar_contorno:
                             cv2.drawContours(
-                                frame, [nuevoContorno], 0, (0, 255, 0), 3)
-                        self.distancia = str(self.x - frame.shape[1] * 0.5)
+                                self.frame, [nuevoContorno], 0, (0, 255, 0), 3)
                         # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")}
-                self.detect = a
+                detect.value = a
                 if len(contornos) == 0:
                     self.distancia = "0"
                 if self.show:
-                    cv2.imshow('frame', frame)
+                    cv2.imshow('frame', self.frame)
                 if self.record:
-                    out.write(frame)
+                    self.out.write(self.frame)
                     
                 if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break    
+                    break 
+            except Exception as e:
+                print(f"Error processing frame: {e}")   
+        if self.tracking:
+            self.stop_tracking()
+        self.finish()
         print("Tracking stopped.")    
     def stop_tracking(self):
         self.tracking = False
 
     def finish(self):
         print("Windows released.")
-        self.cap.release()
+        self.stopped = True
+        self.camera.close()
+        if(self.record):
+            self.out.release()
+
         cv2.destroyAllWindows()
 
 
@@ -136,19 +147,30 @@ class Communication:
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
+            self.read_messages_thread = threading.Thread(target=self.recibir, args=())
+            self.read_messages_thread.start()
+            self.send_messages_thread = threading.Thread(target=self.enviar, args=())
+            self.send_messages_thread.start()
 
-    def read_and_print_messages(self):
-        print("Messages stopped.")
-
-    def comunicacion(self, mensaje):
-        # Manda la distancia medida y espera respuesta del Arduino.
-        #print(f'Enviando mensaje {mensaje}')
-        if self.arduino.isOpen():
-            self.arduino.flush()
-            self.arduino.write(mensaje.encode('utf-8'))
+            self.send_messages_thread.join()
+            self.read_messages_thread.join()
+        else:
+            print("Error al conectar el puerto {}".format(self.arduino.port))
+    def recibir(self):
+        # print('working')
+        while True:
+            message = self.arduino.readline().decode('utf-8').strip()
+            print(message)
+    def enviar(self, RPMA, RPMB):
+        while True:
+            RPMASend = RPMA.value
+            RPMBSend = RPMB.value
+            # mensaje = msg_gen([X, Y], [xR, yR])
+            self.arduino.write(bytes([RPMASend, RPMBSend]))
+            self.arduino.write(b'E')
     
     def stop_messages(self):
-        self.comunicacion('1,0,0')
+        self.comunicacion(bytes([0, 0]))
         self.messages = False
 
 
@@ -266,12 +288,6 @@ class Brain:
         self.tracker = tracker
         self.coms = coms
 
-        self.tracking_thread = threading.Thread(target=self.track_wrapper, args=())
-        self.tracking_thread.daemon = True
-
-        self.read_messages_thread = threading.Thread(target=self.coms.read_and_print_messages)
-        self.read_messages_thread.daemon = True
-
         self.going_back = False
         self.history = []
 
@@ -293,7 +309,6 @@ class Brain:
         self.scooping = 0
         self.last_time = 0.0
         self.begin()
-        self.do()
 
     
     def check_timeout(self):
@@ -303,20 +318,39 @@ class Brain:
             print("Timeout reached. Stopping the tracking and finishing.")
             self.finish()
 
-    def track_wrapper(self):
-        # This function is used to run the track() method in a separate thread.
-        self.tracker.track()
-
     def begin(self):
-        self.tracker.initiateVideo()
+        print("Initiating coms.")
         self.coms.begin()
-        self.tracking_thread.start()
-        print("Tracking thread started.")
-        self.read_messages_thread.start()
-        print("Messages thread started.")
+        print("Coms instantiated.")
+
+        print("Initiating tracker.")
+        self.tracker.initiateVideo()
+        print("tracker instantiated.")
+
+
+        print("Initiating Control.")
         self.control = PID(self.kp, self.ki, self.kd, self.kp_t, self.ki_t, self.kd_t,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
         print("Control instantiated.")
+
+        #t1 = multiprocessing.Process(target = self.tracker.track, args=())
+        t2= multiprocessing.Process(target = self.coms.read_and_print_messages, args=())
+        t3 = multiprocessing.Process(target = self.do, args=())
+
+        #print("Initiating tracker.")
+        #t1.start()
+        print("Initiating read msg.")
+        t2.start()
+        print("Initiating Control.")
+        t3.start()
+
+        #print("Waiting for threads to finish.")
+        #t1.join()
+        print("tracker finish.")
+        t2.join()
+        print("read messages finish.")
+        t3.join()
+        print("control finish.")
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
 
@@ -356,7 +390,7 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     
-                    if(((time.time() - start_time) > 20)):
+                    if(((time.time() - start_time) > 10)):
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
@@ -393,15 +427,16 @@ class Brain:
 
     def automatic(self):
         # si scoopea, detente
-        if self.tracker.detect:
+        if detect.value == 1:
             #self.going_back = True
             actual_time = time.time()
             dt = actual_time - self.last_time
-            outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
+            outputA, outputB = self.control.update(dt, centerX.value, centerY.value)
             self.history.append([-1*outputA, -1*outputB])
             self.last_time = actual_time
             print(f"OutputA: {outputA}, OutputB: {outputB}")
-            self.coms.comunicacion(f"1,{outputA},{outputB}")
+            RPMAG.value = int(outputA)
+            RPMBG.value = int(outputB)
         else:
             self.control.integral = 0
             if(self.state == 0):
@@ -412,31 +447,34 @@ class Brain:
                     self.startTurnAround = time.time()
                 if((time.time() - self.startTurnAround) < 7):
                     print("OutputA: 220, OutputB: -150")
-                    self.coms.comunicacion(self.instructions["turnAround"])
+                    RPMAG.value = 0
+                    RPMBG.value = 0
                 else:
                     self.startTurnAround = 0
                     self.state = 3
             elif(self.state == 2):
                 print("OutputA: 68, OutputB: 68")
+                
+                RPMAG.value = 68
+                RPMBG.value = 68
                 self.coms.comunicacion(self.instructions["slow"])
             elif(self.state == 3):
                 print("OutputA: 0, OutputB: 0.000001")
-                self.coms.comunicacion(self.instructions["stop"])
+                
+                RPMAG.value = 0
+                RPMBG.value = 0
 
 
     def finish(self):
         # Close the serial port
         # Release the video writer after the main loop
         print("Finishing program.")
-        out.release()
-        print("Video released.")
         self.coms.arduino.close()
         print("Arduino closed.")
         self.coms.stop_messages()
         self.read_messages_thread.join()
         self.tracker.stop_tracking()
         self.tracker.finish()
-        self.tracking_thread.join()
         print("Program finished.")
 
 brain = Brain(NutsTracker(), Communication())

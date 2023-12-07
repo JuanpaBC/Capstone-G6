@@ -3,7 +3,7 @@
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
 
-#define ServoPin 8 // Servo pin
+#define ServoPin 38 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 5
@@ -21,7 +21,7 @@
 #define BC1 19 // D7
 #define BC2 18 // D8
 
-#define baud 9600
+#define baud 115200
 
 #define pi 3.1415
 
@@ -70,6 +70,9 @@ unsigned long currentMillis = 0;
 
 int agarro_castana = 0;
 int scooping = 0;
+
+
+byte buffer[3];
 void checkDistance()
 {
     // Clear the trigPin by setting it LOW:
@@ -115,6 +118,17 @@ void scoop() {
       }
     }
 }
+
+int sign(int x) {
+  if (x > 0) {
+    return 1;
+  } else if (x < 0) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
 
 int CheckPWM(int PWM_val)
 {
@@ -241,50 +255,13 @@ void ISR_EncoderB1() {
   }
 }
 
-void readSerialPort()
-{
-  memset(msg, 0, sizeof(msg));  // Clear the msg array
-  if (Serial.available()) {
-    delay(30);
-    int i = 0;
-    while (Serial.available() > 0 && i < sizeof(msg) - 1) {
-      msg[i++] = Serial.read();
-    }
-    Serial.flush();
+void readSerialPort() {
+  if (Serial.available() > 0) {
+    String msga= Serial.readStringUntil('\n');
+    Serial.println(msga);
   }
 }
 
-void stringSplitter(char *msg, int *instruction, int *left_pwm, int *right_pwm) {
-  char *token = strtok(msg, ",");
-  for (int i = 0; i < 3; i++) {
-    int intValue = 0;
-    float floatValue = 0.0;
-    intValue = atoi(token);
-    switch (i) {
-      case 0:
-        *instruction = intValue;
-        break;
-      case 1:
-        *left_pwm = intValue;
-        break;
-      case 2:
-        *right_pwm = intValue;
-        break;
-    }
-    if(*instruction != 1) break;
-    token = strtok(NULL, ",");
-  }
-}
-
-int sign(int x) {
-  if (x > 0) {
-    return 1;
-  } else if (x < 0) {
-    return -1;
-  } else {
-    return 0;
-  }
-}
 
 void setup() {
   Serial.begin(baud);
@@ -326,13 +303,9 @@ void loop() {
       scooping = 0;
     }
   }
-  if ((millis() - t_prev)>= 100) {
-      if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-        stringSplitter(msg, &instruction, &PWM_A_val, &PWM_B_val);
-        msg[0] == '\0';
-      }
+  if ((millis() - t_prev)>= 50) {
       if(scooping == 0){
-        checkDistance();
+        //checkDistance();
       }
       t = millis();
       ThetaA = EncoderCountA;
@@ -342,9 +315,9 @@ void loop() {
       dt = t - t_prev;
       RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
       RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
-      if(scooping ==0){
-        WriteDriverVoltageA(100);
-        WriteDriverVoltageB(100);
+      if(scooping == 0){
+        WriteDriverVoltageA(PWM_A_val);
+        WriteDriverVoltageB(PWM_B_val);
       }
       else{
         WriteDriverVoltageA(0);
@@ -361,6 +334,12 @@ void loop() {
       Pos_x = Pos_x + (Vel_x*dt)/1000;
       Pos_y = Pos_y + (Vel_y*dt)/1000;
 
+      Serial.print("PWMA: ");
+      Serial.print(PWM_A_val);
+
+      Serial.print("PWMB: ");
+      Serial.println(PWM_B_val);
+      
       //Serial.print("POSX: ");
       //Serial.print(Pos_x);
       //Serial.print("POSY: ");

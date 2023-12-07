@@ -8,18 +8,18 @@
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 5
 
-#define ENA 6 // D6
+#define ENA 6
 #define ENB 11
 
-#define AIN1 4 // D4
-#define AIN2 5 // D5
-#define BIN1 10 // D10
-#define BIN2 9 // D9
+#define AIN1 4
+#define AIN2 5
+#define BIN1 10
+#define BIN2 9
 
-#define AC1 21 // D2
-#define AC2 20 // D3
-#define BC1 19 // D7
-#define BC2 18 // D8
+#define AC1 21
+#define AC2 20
+#define BC1 19
+#define BC2 18
 
 #define baud 9600
 
