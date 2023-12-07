@@ -28,14 +28,14 @@
 Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
 
-// ************ DEFINITIONS A************
+// **** DEFINITIONS A******
 volatile long EncoderCountA = 0;
 float ThetaA_prev, ThetaB_prev;
 float RPM_A;
 float vel_A;
 int PWM_A_val;
 float Dist_A;
-// ************ DEFINITIONS B************
+// **** DEFINITIONS B******
 volatile long EncoderCountB = 0;
 float ThetaA, ThetaB;
 float RPM_B;
@@ -51,7 +51,7 @@ float Vel_ang, Theta;
 unsigned long t, t_prev;
 int dt;
 
-float NFactor = 1500;
+float NFactor = 1400;
 int PWM_min = 150;
 int PWM_max = 255;
 
@@ -70,62 +70,6 @@ unsigned long currentMillis = 0;
 
 int agarro_castana = 0;
 int scooping = 0;
-void checkDistance()
-{
-    // Clear the trigPin by setting it LOW:
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(5);
-
-  // Trigger the sensor by setting the trigPin high for 10 microseconds:
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-  // Read the echoPin, pulseIn() returns the duration (length of the pulse) in microseconds:
-  duration = pulseIn(echoPin, HIGH);
-  // Calculate the distance:
-  distance = duration * 0.034 / 2;
-
-  // Print the distance on the Serial Monitor (Ctrl+Shift+M):
-}
-
-void scoop() {
-    // The following loop runs until the servo is turned to 180 degrees
-    // Serial.println("scooping");
-    if(scooping == 1){
-      currentMillis = millis();
-      if (currentMillis - startScoop >= SCOOPDELAY) {
-          angle++;
-          servo.write(angle);
-          startScoop = currentMillis;
-      }
-      if(angle >= MAXANG){
-        scooping = 2;
-      }
-    }
-    if(scooping == 2){
-      currentMillis = millis();
-      if (currentMillis - startScoop >= SCOOPDELAY) {
-          angle--;
-          servo.write(angle);
-          startScoop = currentMillis;
-      }
-      if(angle <= MINANG){
-        scooping = 3;
-      }
-    }
-}
-
-int CheckPWM(int PWM_val)
-{
-    if (abs(PWM_val) < PWM_min){
-        return int(sign(PWM_val) * PWM_min);
-    }
-    if (abs(PWM_val) > PWM_max){
-        return int(sign(PWM_val) * PWM_max);
-    }
-    return PWM_val;
-}
 
 void WriteDriverVoltageA(int PWM_val)
 {
@@ -182,6 +126,7 @@ void ISR_EncoderA2() {
     }
   }
 }
+
 void ISR_EncoderA1() {
   bool PinB = digitalRead(AC2);
   bool PinA = digitalRead(AC1);
@@ -204,6 +149,7 @@ void ISR_EncoderA1() {
     }
   }
 }
+
 void ISR_EncoderB2() {
   bool PinB = digitalRead(BC2);
   bool PinA = digitalRead(BC1);
@@ -240,42 +186,6 @@ void ISR_EncoderB1() {
     }
   }
 }
-
-void readSerialPort()
-{
-  memset(msg, 0, sizeof(msg));  // Clear the msg array
-  if (Serial.available()) {
-    delay(30);
-    int i = 0;
-    while (Serial.available() > 0 && i < sizeof(msg) - 1) {
-      msg[i++] = Serial.read();
-    }
-    Serial.flush();
-  }
-}
-
-void stringSplitter(char *msg, int *instruction, int *left_pwm, int *right_pwm) {
-  char *token = strtok(msg, ",");
-  for (int i = 0; i < 3; i++) {
-    int intValue = 0;
-    float floatValue = 0.0;
-    intValue = atoi(token);
-    switch (i) {
-      case 0:
-        *instruction = intValue;
-        break;
-      case 1:
-        *left_pwm = intValue;
-        break;
-      case 2:
-        *right_pwm = intValue;
-        break;
-    }
-    if(*instruction != 1) break;
-    token = strtok(NULL, ",");
-  }
-}
-
 int sign(int x) {
   if (x > 0) {
     return 1;
@@ -300,40 +210,9 @@ void setup() {
   pinMode(AIN2, OUTPUT);
   pinMode(BIN1, OUTPUT);
   pinMode(BIN2, OUTPUT);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  servo.attach(ServoPin); // States that the servo is attached to pin 5
-  servo.write(angle);
-
 }
-
 void loop() {
-  readSerialPort();
-  if(scooping == 0){
-    if(distance < 9){
-      distance = 12;
-      scooping = 1;
-      startScoop = millis();
-    }
-  }
-  
-  if(scooping == 1 || scooping == 2){
-    scoop();
-  }
-  
-  if(scooping == 3){
-    if(millis()-startScoop >= 1600){
-      scooping = 0;
-    }
-  }
   if ((millis() - t_prev)>= 100) {
-      if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-        stringSplitter(msg, &instruction, &PWM_A_val, &PWM_B_val);
-        msg[0] == '\0';
-      }
-      if(scooping == 0){
-        checkDistance();
-      }
       t = millis();
       ThetaA = EncoderCountA;
       ThetaB = EncoderCountB;
@@ -342,13 +221,13 @@ void loop() {
       dt = t - t_prev;
       RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
       RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
-      if(scooping ==0){
-        WriteDriverVoltageA(100);
-        WriteDriverVoltageB(100);
-      }
-      else{
+      if(Pos_x > 1){
         WriteDriverVoltageA(0);
         WriteDriverVoltageB(0);
+      }
+      else {
+        WriteDriverVoltageA(150);
+        WriteDriverVoltageB(150);
       }
 
       vel_A = RPM_A * pi * 2 / 60.0;
@@ -360,6 +239,11 @@ void loop() {
       Vel_y = Vel_lin * sin(Theta);
       Pos_x = Pos_x + (Vel_x*dt)/1000;
       Pos_y = Pos_y + (Vel_y*dt)/1000;
+      Serial.print(t);
+      Serial.print(", ");
+      Serial.print("PosX: ");
+      Serial.print(Pos_x);
+      Serial.println("");
 
       //Serial.print("POSX: ");
       //Serial.print(Pos_x);
