@@ -283,6 +283,7 @@ class Brain:
         self.history = []
 
         self.distance = 1
+        self.dist = 0
         self.turning = False
         self.state = 0
         self.startTurnAround = 0
@@ -363,7 +364,7 @@ class Brain:
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
                     
-                    if(((time.time() - start_time) > 20)):
+                    if(((time.time() - start_time) > 20 and self.distance)):
                         self.automatic()
                         # if(i>5):
                         #     self.coms.comunicacion(self.instructions["stop"])
@@ -375,10 +376,11 @@ class Brain:
                     bData = splitData[2]
                     pala = splitData[3]
                     self.scooping = int(pala.split(':')[1])
-                        # aParts = aData.split('|')
-                        # BParts = bData.split('|')
-                        # RPMA = float(aParts[0].split(':')[1])
-                        # RPMB = float(BParts[0].split(':')[1])
+                    aParts = aData.split('|')
+                    BParts = bData.split('|')
+                    distA = float(aParts[0].split(':')[1])
+                    distB = float(BParts[0].split(':')[1])
+                    
                         # Save data to listsc
                         # RPMA_values.append(RPMA)
                         # RPMB_values.append(RPMB)

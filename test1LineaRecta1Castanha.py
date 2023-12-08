@@ -30,7 +30,7 @@ class NutsTracker:
         self.detect = False
 
     def initiateVideo(self):
-        self.cap = cv2.VideoCapture(2)
+        self.cap = cv2.VideoCapture(0)
         ret, frame = self.cap.read()
         while (not ret):
             print(ret,frame)
