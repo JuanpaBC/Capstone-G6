@@ -24,7 +24,7 @@ class Communication:
         self.messages = True
 
     def begin(self):
-        self.arduino = serial.Serial(self.target_W, self.baud, timeout=1)
+        self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
