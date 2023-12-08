@@ -5,13 +5,17 @@ import serial
 import time
 # import keyboard
 import threading
-from picamera2 import Picamera2, Preview
+from ultralytics import YOLO
 import multiprocessing
+from picamera2 import Picamera2, Preview
+
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter('output.avi', fourcc, 1.0, (640, 480))  # Adjust fps and frame size
+
 centerX = multiprocessing.Value('i', 0)
 centerY = multiprocessing.Value('i', 0)
-RPMAG =  multiprocessing.Value('i', 0)
-RPMBG =  multiprocessing.Value('i', 0)
 detect = multiprocessing.Value('i', 0)
+
 class NutsTracker:
     def __init__(self, resolution=(320, 240), framerate=30):
         self.record = True
@@ -61,8 +65,6 @@ class NutsTracker:
             self.x_max = self.camera.resolution[0]
             self.y_max = self.camera.resolution[1]
             time.sleep(2)
-            threading.Thread(target=self.track, args=()).start()
-            return self
         except Exception as e:
             print(f"Error initializing camera: {e}")
         
@@ -139,37 +141,31 @@ class Communication:
         self.target_L = '/dev/ttyACM0'
         self.baud = 9600
         self.data = ''
-        self.messages = True
 
     def begin(self):
         self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
         time.sleep(0.1)
         if self.arduino.isOpen():
+            self.arduino.flush()
             print("{} conectado!".format(self.arduino.port))
-            time.sleep(1)
-            self.read_messages_thread = threading.Thread(target=self.recibir, args=())
-            self.read_messages_thread.start()
-            self.send_messages_thread = threading.Thread(target=self.enviar, args=())
-            self.send_messages_thread.start()
 
-            self.send_messages_thread.join()
-            self.read_messages_thread.join()
-        else:
-            print("Error al conectar el puerto {}".format(self.arduino.port))
-    def recibir(self):
-        # print('working')
+    def read_and_print_messages(self):
         while True:
-            message = self.arduino.readline().decode('utf-8').strip()
-            print(message)
-    def enviar(self):
-        while True:
-            msg = "1,200,200"
-            print(msg)
-            self.arduino.write(msg.encode('utf-8'))
-    
-    def stop_messages(self):
-        self.comunicacion(bytes([0, 0]))
-        self.messages = False
+            try:
+                if self.arduino.isOpen():
+                    message = self.arduino.readline().decode('utf-8').strip()
+                    if message:
+                        self.data = message
+                        print(f'Recibiendo mensaje: {message}')
+            except Exception as e:
+                print(f"Error reading message: {e}")
+
+    def comunicacion(self, mensaje):
+        # Manda la distancia medida y espera respuesta del Arduino.
+        #print(f'Enviando mensaje {mensaje}')
+        if self.arduino.isOpen():
+            self.arduino.write(mensaje.encode('utf-8'))
+            time.sleep(0.5)
 
 
 class PID:
@@ -184,7 +180,6 @@ class PID:
         self.previous_error = 0.0
         self.previous_errorA= 0.0
         self.previous_errorB= 0.0
-        self.integral_lineal= 0.0
         self.integral_angularA = 0.0
         self.integral_angularB = 0.0
         self.x_target = x_target
@@ -207,6 +202,7 @@ class PID:
     def update(self, delta_time, x, y):
         self.theta_error(x, y)
         self.lineal_error(x, y)
+        print(self.theta_err)
         
         #PID para lineal y angular separados con distintos kp, ki y kd
         
@@ -262,13 +258,13 @@ class PID:
             #    outputB = max(outputB, -255)
             #    outputB = min(outputB, -120)
             if outputA > 0:
-                outputA = min(outputA, 230)
+                outputA = min(outputA, 255)
             if outputB > 0:
-                outputB = min(outputB, 230)
+                outputB = min(outputB, 255)
             if outputA < 0:
-                outputA = max(outputA, -230)
+                outputA = max(outputA, -255)
             if outputB < 0:
-                outputB = max(outputB, -230)
+                outputB = max(outputB, -255)
         return outputA, outputB
 
 
@@ -276,99 +272,51 @@ class Brain:
 
     def __init__(self, tracker, coms) -> None:
 
-        self.kp = 6
-        self.ki = 0.03
-        self.kd = 0.15
-        self.kp_t = 300
-        self.ki_t = 5
-        self.kd_t = 5
-
         self.tracker = tracker
         self.coms = coms
+        self.tracker.initiateVideo()
 
-        self.going_back = False
-        self.history = []
+        self.tracking_thread = threading.Thread(target=self.track_wrapper, args=())
 
-        self.distance = 1
+        self.read_messages_thread = threading.Thread(target=self.coms.read_and_print_messages)
+
+        
         self.turning = False
-        self.state = 0
-        self.startTurnAround = 0
         self.instructions = {
             "forward" : "1,200,200\n",
             "backward" : "1,-200,-200\n",
-            "turnAround" : "1,250,-250\n",
             "right" : "1,200,-200\n",
             "left" : "1,-200,200\n",
             "shovel" : "2\n",
-            "stop" : "1,0,0\n",
-            "slow" : "1,73,73\n"
+            "stop" : "1,0,0\n"
         }
-        self.scoop_in_progress = False
-        self.scooping = 0
         self.last_time = 0.0
         self.begin()
+        self.do()
 
-    
-    def check_timeout(self):
-        # Check if the timeout duration has passed
-        elapsed_time = time.time() - self.start_time
-        if elapsed_time > self.timeout_duration:
-            print("Timeout reached. Stopping the tracking and finishing.")
-            self.finish()
 
+    def track_wrapper(self):
+        # This function is used to run the track() method in a separate thread.
+        self.tracker.track()
     def begin(self):
-        print("Initiating coms.")
         self.coms.begin()
-        print("Coms instantiated.")
-
-        print("Initiating tracker.")
-        self.tracker.initiateVideo()
-        print("tracker instantiated.")
-
-
-        print("Initiating Control.")
-        self.control = PID(self.kp, self.ki, self.kd, self.kp_t, self.ki_t, self.kd_t,round(
+        self.tracking_thread.start()
+        self.read_messages_thread.start()        
+        self.control = PID(6, 0.03, 0.1, 330,5,6,round(
             self.tracker.x_max/2), round(self.tracker.y_max))
-        print("Control instantiated.")
-
-        #t1 = multiprocessing.Process(target = self.tracker.track, args=())
-        t2= multiprocessing.Process(target = self.coms.read_and_print_messages, args=())
-        t3 = multiprocessing.Process(target = self.do, args=())
-
-        #print("Initiating tracker.")
-        #t1.start()
-        print("Initiating read msg.")
-        t2.start()
-        print("Initiating Control.")
-        t3.start()
-
-        #print("Waiting for threads to finish.")
-        #t1.join()
-        print("tracker finish.")
-        t2.join()
-        print("read messages finish.")
-        t3.join()
-        print("control finish.")
         #self.control = PID(0.35, 0.001, 0.008, round(
         #    self.tracker.x_max/2), round(self.tracker.y_max))
 
+        
+
     def do(self):
         running = True
-        #RPMA_values = []
-        #RPMB_values = []
-        #RPMref_values = []
-        last_data = ''
-
-        #csv_file_path = 'serial_data.csv'
-        #csv_header = ['Time', 'RPMA', 'RPMB', 'ARPMref', 'BRPMref']
-        #last_data = ""
+        explorer_mode = True
+        i = 0
         try:
-            #with open(csv_file_path, 'w', newline='') as csvfile:
-                #csv_writer = csv.writer(csvfile)
-                #csv_writer.writerow(csv_header)
             self.last_time = time.time()
             start_time = time.time()
-            while time.time() - start_time < 80:
+            while running:
                 if (self.coms.manual_mode):
                     command = input()
                     if command == 'a':
@@ -387,19 +335,26 @@ class Brain:
                     elif command == 'q':
                         self.coms.comunicacion(self.instructions["stop"])
                 else:
-                    
-                    if(((time.time() - start_time) > 10)):
-                        self.automatic()
-                        # if(i>5):
-                        #     self.coms.comunicacion(self.instructions["stop"])
-                if(len(self.coms.data.split(','))==4 and self.coms.data != last_data):
+                    # Movimiento automático
+                    if self.tracker.detect:
+                        explorer_mode = False
+                        actual_time = time.time()
+                        dt = actual_time - self.last_time
+                        outputA, outputB = self.control.update(dt, self.tracker.x, self.tracker.y)
+                        self.last_time = actual_time
+                        print(f"OutputA: {outputA}, OutputB: {outputB}")
+                        self.coms.comunicacion(f"1,{outputA},{outputB}")
+                    else:
+                        self.control.integral = 0
+                        i = i + 1
+                        if(explorer_mode and ((time.time() - start_time)> 5)):
+                            print("OutputA: 65, OutputB: 65")
+                            self.coms.comunicacion(f"1,65,65")
+                        if(i>5):
+                            self.coms.comunicacion(self.instructions["stop"])
+                    # if(len(self.coms.data.split(','))>=3 and self.coms.data != last_data):
                         # Extract RPMA, RPMB, RPMref from the updated 'data'
-                    splitData = self.coms.data.split(',')
-                    timestamp = splitData[0]
-                    aData = splitData[1]
-                    bData = splitData[2]
-                    pala = splitData[3]
-                    self.scooping = int(pala.split(':')[1])
+                        # timestamp, aData, bData = self.coms.data.split(',')
                         # aParts = aData.split('|')
                         # BParts = bData.split('|')
                         # RPMA = float(aParts[0].split(':')[1])
@@ -409,7 +364,7 @@ class Brain:
                         # RPMB_values.append(RPMB)
                         # Save data to CSV
                         #csv_writer.writerow([timestamp, RPMA, RPMB, ARef,BRef])
-                    last_data = self.coms.data
+                        # last_data = self.coms.data
 
                         # time.sleep(0.1)
                     # if keyboard.is_pressed('x'):
@@ -424,55 +379,14 @@ class Brain:
             self.finish()
 
     def automatic(self):
-        # si scoopea, detente
-        if detect.value == 1:
-            #self.going_back = True
-            actual_time = time.time()
-            dt = actual_time - self.last_time
-            outputA, outputB = self.control.update(dt, centerX.value, centerY.value)
-            self.history.append([-1*outputA, -1*outputB])
-            self.last_time = actual_time
-            print(f"OutputA: {outputA}, OutputB: {outputB}")
-            RPMAG.value = int(outputA)
-            RPMBG.value = int(outputB)
-        else:
-            self.control.integral = 0
-            if(self.state == 0):
-                print("OutputA: 68, OutputB: 68")
-                self.coms.comunicacion(self.instructions["slow"])
-            elif(self.state == 1):
-                if(self.startTurnAround == 0):
-                    self.startTurnAround = time.time()
-                if((time.time() - self.startTurnAround) < 7):
-                    print("OutputA: 220, OutputB: -150")
-                    RPMAG.value = 0
-                    RPMBG.value = 0
-                else:
-                    self.startTurnAround = 0
-                    self.state = 3
-            elif(self.state == 2):
-                print("OutputA: 68, OutputB: 68")
-                
-                RPMAG.value = 68
-                RPMBG.value = 68
-                self.coms.comunicacion(self.instructions["slow"])
-            elif(self.state == 3):
-                print("OutputA: 0, OutputB: 0.000001")
-                
-                RPMAG.value = 0
-                RPMBG.value = 0
+        return
 
 
     def finish(self):
-        # Close the serial port
-        # Release the video writer after the main loop
-        print("Finishing program.")
+        out.release()
         self.coms.arduino.close()
-        print("Arduino closed.")
-        self.coms.stop_messages()
-        self.read_messages_thread.join()
         self.tracker.stop_tracking()
         self.tracker.finish()
-        print("Program finished.")
+
 
 brain = Brain(NutsTracker(), Communication())

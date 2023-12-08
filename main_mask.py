@@ -43,7 +43,8 @@ class NutsTracker:
         #self.y_max, self.x_max, _ = frame.shape
         #self.obj = [int(self.x_max / 2), int(self.y_max)]
         self.cap  = Picamera2()
-        self.cap .start_preview(Preview.QTGL)
+        if(self.show):
+            self.cap .start_preview(Preview.QTGL)
 
         preview_config = self.cap.create_preview_configuration()
         self.cap.configure(preview_config)
