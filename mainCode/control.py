@@ -24,7 +24,13 @@ class PID:
         
     def theta_error(self, x, y):
         # Returns the error in the angle theta
-        angle = math.atan((x - self.x_target)/(self.y_target - y))
+        if(self.y_target - y) == 0:
+            if(x - self.x_target == 0):
+                angle = -math.pi/2
+            else:
+                angle = (x - self.x_target)/abs(x - self.x_target)  * math.pi/2
+        else:
+            angle = math.atan((x - self.x_target)/(self.y_target - y))
         self.theta_err = angle
 
     def lineal_error(self, x, y):

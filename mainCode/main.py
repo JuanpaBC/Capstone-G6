@@ -1,22 +1,25 @@
 from comunication import Communication
+from control import PID
+from tracker import NutsTracker
+import threading
 
 
 if __name__ == '__main__':
     print("Starting...")
-    #tracker = NutsTracker()
-    #tracker.initiateVideo()
-    #t1 = threading.Thread(target = tracker.track)
-    #t1.start()
+    tracker = NutsTracker()
+    tracker.initiateVideo()
+    t1 = threading.Thread(target = tracker.track)
+    t1.start()
 
     print("Video Started!")
     coms = Communication()
     coms.begin()
     print("Coms Started!")
-    #control = PID(6, 0.03, 0.1, 295, 5, 5,round(tracker.x_max/2), round(tracker.y_max))
+    control = PID(6, 0.03, 0.1, 295, 5, 5,round(tracker.x_max/2), round(tracker.y_max))
     print("Control Started!")
 
     while True:
-        if(False and tracker.detect == 1):
+        if(tracker.detect == 1):
             x = tracker.x
             y = tracker.y
             RPMA, RPMB = control.update(0.1, x, y)
