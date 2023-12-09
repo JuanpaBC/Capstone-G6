@@ -32,7 +32,7 @@ class NutsTracker:
             self.frame = cv2.imread(image_file)
             frameRGB = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
             green_channel = frameRGB[:, :, 1]
-            print(green_channel.shape)                                                                
+                                                                          
             mask = np.logical_and(
                 self.default_lower <= green_channel, green_channel <= self.default_upper)
             plt.imshow(mask*255, cmap='gray')

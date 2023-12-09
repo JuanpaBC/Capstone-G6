@@ -1,0 +1,4 @@
+Lower: [29,40,54]
+Upper: [105,208,255]
+minArea: 10000
+maxArea: 69120
