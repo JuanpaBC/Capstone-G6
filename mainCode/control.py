@@ -106,4 +106,4 @@ class PID:
                 outputA = max(outputA, -255)
             if outputB < 0:
                 outputB = max(outputB, -255)
-        return outputA, outputB
+        return int(round(outputA)), int(round(outputB))

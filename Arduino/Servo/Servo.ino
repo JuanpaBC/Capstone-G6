@@ -1,19 +1,21 @@
-#include <Servo.h>
+#include <Servo.h> //Imports the library Servo
+//GeeKee CeeBee
+#define trigPin 3 // TriggerSensor
+#define echoPin 2 // EchoSensor
 
-#define IRLed 7
-
-#define redLed 51
 
 #define servoPin 8
 
-#define IRsensorPin 2
 
 Servo servo; //Defines the object Servo of type(class) Servo
-int angle = 0; // Defines an integer
-int SCOOPDELAY = 15;
+int angle = 3; // Defines an integer
+int SCOOPDELAY = 5;
 int MAXANG = 180;
-int MINANG = 10;
+int MINANG = 3;
+int duration;
+int distance;
 
+int scoopRespawn = 1500;
 void scoop()
 {
     Serial.println("scooping");
@@ -32,15 +34,48 @@ void scoop()
     }
 }
 
+
+void checkDistance()
+{
+    // Clear the trigPin by setting it LOW:
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(5);
+
+  // Trigger the sensor by setting the trigPin high for 10 microseconds:
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Read the echoPin, pulseIn() returns the duration (length of the pulse) in microseconds:
+  duration = pulseIn(echoPin, HIGH);
+  // Calculate the distance:
+  distance = duration * 0.034 / 2;
+
+  // Print the distance on the Serial Monitor (Ctrl+Shift+M):
+}
+
 void setup() {
   servo.attach(servoPin);
   servo.write(angle);
 
-  scoop();
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
 
   Serial.begin(115200);
 }
-
+int hola =0;
 
 void loop() { 
+  checkDistance();
+  Serial.println(distance);
+  if(distance < 9 ){
+    hola = hola + 1;
+    if(hola > 10){
+      scoop();
+      delay(1000);
+    }
+  }
+  else{
+    hola = 0;
+  }
 }

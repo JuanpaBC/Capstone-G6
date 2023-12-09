@@ -1,9 +1,9 @@
-import cv2
 import numpy as np
 import time
 # import keyboard
 import threading
 from picamera2 import Picamera2, Preview
+import cv2
 
 class NutsTracker:
     def __init__(self, resolution=(320, 240), framerate=30,):
@@ -15,7 +15,7 @@ class NutsTracker:
         self.frame = None
         self.stopped = False
         self.tracking = True
-        self.show = False
+        self.show = True
         self.mostrar_contorno = True
         self.x = -1
         self.y = -1
@@ -38,16 +38,14 @@ class NutsTracker:
             self.camera = Picamera2()  # Change this line
             self.camera.resolution = self.resolution
             self.camera.framerate = self.framerate
-
-            #self.camera.start_preview(Preview.QTGL)
-
+            if(self.show):
+                self.camera.start_preview(Preview.QTGL)
             preview_config = self.camera.create_preview_configuration()
             self.camera.configure(preview_config)
-            
+        
             #self.camera.start_preview(Preview.QT)
             self.camera.start()
             if(self.record):
-
                 fourcc = cv2.VideoWriter_fourcc(*'XVID')
                 self.out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
             # self.rawCapture = Picamera2.capture_array("raw")
@@ -99,7 +97,7 @@ class NutsTracker:
                         # print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1] * 0.5}")}
                 print(f"detectIt: {detectIt}")
                 self.detect = a
-                if a == 1:
+                if a == 0:
                     self.x  = self.objX
                     self.y = self.objY
                 if self.show:

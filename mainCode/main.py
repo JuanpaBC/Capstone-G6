@@ -22,9 +22,9 @@ if __name__ == '__main__':
         if(tracker.detect == 1):
             x = tracker.x
             y = tracker.y
-            RPMA, RPMB = control.update(0.1, x, y)
-            print(f"RPMA: {RPMA}, RPMB: {RPMB}")
-            msg = f"{RPMA},{RPMB}\n"
+            PWMA, PWMB = control.update(0.1, x, y)
+            print(f"PWMA: {PWMA}, PWMB: {PWMB}")
+            msg = f"{PWMA},{PWMB}\n"
             coms.comunicacion(msg)
         else:
             print("RPMA: 0, RPMB: 0")
