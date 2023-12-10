@@ -50,7 +50,9 @@ class NutsTracker:
             
             if(self.record):
                 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                self.out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
+                self.outRaw = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame siz
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                self.outMask = cv2.VideoWriter('output2.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame sizee
             self.x_max = self.camera.resolution[0]
             self.y_max = self.camera.resolution[1]
             time.sleep(1)
@@ -66,8 +68,8 @@ class NutsTracker:
                 # Capture frame from the camera
                 self.frame = self.camera.capture_array()
                 frameRGB = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-                self.frame = apply_median_filter(frameRGB, kernel_size=3)
-                frameHSV = cv2.cvtColor(self.frame, cv2.COLOR_RGB2HSV)
+                frameRGBMedian = apply_median_filter(frameRGB, kernel_size=3)
+                frameHSV = cv2.cvtColor(frameRGBMedian, cv2.COLOR_RGB2HSV)
                 mask = cv2.inRange(frameHSV, self.default_lower, self.default_upper)
                 contornos, _ = cv2.findContours(
                     mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -106,7 +108,8 @@ class NutsTracker:
                     #if cv2.waitKey(1) & 0xFF == ord('s'):
                     #    break 
                 if self.record:
-                    self.out.write(self.frame)
+                    self.outRaw.write(frameRGBMedian)
+                    self.outMask.write(self.frame)
             
             except Exception as e:
                 print(f"Error processing frame: {e}")   

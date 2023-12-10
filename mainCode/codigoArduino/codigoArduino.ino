@@ -292,7 +292,7 @@ void setup()
     pinMode(BIN2, OUTPUT);
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
-    servo.attach(ServoPin); // States that the servo is attached to pin 5
+    servo.attach(servoPin, 771, 2740);
     servo.write(angle);
 }
 

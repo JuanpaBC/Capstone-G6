@@ -105,7 +105,7 @@ except FileNotFoundError:
     upper = np.array([96, 255, 255], np.uint8)
 
 # Replace camera capture with video file capture
-video_file_path = 'castan.h264'  # Change this to your video file path
+video_file_path = 'test124124.avi'  # Change this to your video file path
 cap = cv2.VideoCapture(video_file_path)
 
 ret, frame = cap.read()
@@ -164,6 +164,7 @@ try:
         upper = np.array([hMax, sMax, vMax])
 
         # Convert to HSV format and color threshold
+        image = apply_median_filter(image, kernel_size=3)
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, lower, upper)
         result = cv2.bitwise_and(image, image, mask=mask)
@@ -174,8 +175,8 @@ try:
         if not paused:
             ret, frame = cap.read()
         if ret == True:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = apply_median_filter(frame, kernel_size=3)
+            #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            #frame = apply_median_filter(frame, kernel_size=3)
             frameHSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
             mask = cv2.inRange(frameHSV, lower, upper)
             contornos, _ = cv2.findContours(
@@ -228,4 +229,4 @@ except KeyboardInterrupt:
 
 finally:
     cap.release()
-    #cv2.destroyAllWindows()
+    cv2.destroyAllWindows()

@@ -57,7 +57,7 @@ void checkDistance()
 }
 
 void setup() {
-  servo.attach(servoPin);
+  servo.attach(servoPin, 771, 2740);
   servo.write(MINANG);
 
   pinMode(trigPin, OUTPUT);
