@@ -202,8 +202,7 @@ try:
                     if mostrar_contorno:
                         cv2.drawContours(
                             frame, [nuevoContorno], 0, (0, 255, 0), 3)
-                    print(f"Distancia con respecto al centro de la imagen: {
-                          x - frame.shape[1]*0.5}")
+                    print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
             # cv2.imshow('maskAzul', mask)
             # cv2.imshow('maskVerde', mask)
             cv2.imshow('frame', frame)
@@ -229,4 +228,4 @@ except KeyboardInterrupt:
 
 finally:
     cap.release()
-    cv2.destroyAllWindows()
+    #cv2.destroyAllWindows()

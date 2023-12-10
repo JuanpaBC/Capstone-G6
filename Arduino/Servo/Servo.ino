@@ -8,12 +8,12 @@
 
 
 Servo servo; //Defines the object Servo of type(class) Servo
-int angle = 3; // Defines an integer
+int angle = 0; // Defines an integer
 int SCOOPDELAY = 5;
-int MAXANG = 180;
-int MINANG = 3;
+int MAXANG = 170;
+int MINANG = 0;
 int duration;
-int distance;
+int distance = 10;
 
 int scoopRespawn = 1500;
 void scoop()
@@ -25,6 +25,7 @@ void scoop()
         servo.write(angle);
         delay(SCOOPDELAY);
     }
+    delay(500);
 
     // The following for loop goes back till servo is turned till 10degrees
     for (angle = MAXANG; angle > MINANG; angle--)
@@ -32,6 +33,7 @@ void scoop()
         servo.write(angle);
         delay(SCOOPDELAY);
     }
+    delay(500);
 }
 
 
@@ -56,22 +58,24 @@ void checkDistance()
 
 void setup() {
   servo.attach(servoPin);
-  servo.write(angle);
+  servo.write(MINANG);
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+
 
   Serial.begin(115200);
 }
 int hola =0;
 
 void loop() { 
-  checkDistance();
+  scoop();
+  //checkDistance();
   Serial.println(distance);
   if(distance < 9 ){
     hola = hola + 1;
     if(hola > 10){
-      scoop();
+      //scoop();
       delay(1000);
     }
   }

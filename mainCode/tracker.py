@@ -5,8 +5,13 @@ import threading
 from picamera2 import Picamera2, Preview
 import cv2
 
+def apply_median_filter(image, kernel_size=3):
+    filtered_image = cv2.medianBlur(image, kernel_size)
+
+    return filtered_image
+
 class NutsTracker:
-    def __init__(self, resolution=(320, 240), framerate=30,):
+    def __init__(self, resolution=(2028, 1520), framerate=12,):
         self.record = True
         # initialize the frame and the variable used to indicate
         # if the thread should be stopped
@@ -15,7 +20,7 @@ class NutsTracker:
         self.frame = None
         self.stopped = False
         self.tracking = True
-        self.show = True
+        self.show = False
         self.mostrar_contorno = True
         self.x = -1
         self.y = -1
@@ -23,10 +28,10 @@ class NutsTracker:
         self.y_max = resolution[1]
         self.detect = 0
         self.obj = [0, 0]
-        self.min_area = 5
-        self.max_area = 20000000
-        self.default_lower = np.array([3, 162, 53])
-        self.default_upper = np.array([47, 255, 255])
+        self.min_area = 10000
+        self.max_area = 69120
+        self.default_lower = np.array([29,40,54])
+        self.default_upper = np.array([105,208,255])
         self.detect = 0
         self.objX = resolution[0]/2
         self.objY = resolution[1]
@@ -36,22 +41,16 @@ class NutsTracker:
         print("Initiating video.")
         try:
             self.camera = Picamera2()  # Change this line
-            self.camera.resolution = self.resolution
-            self.camera.framerate = self.framerate
             if(self.show):
                 self.camera.start_preview(Preview.QTGL)
-            preview_config = self.camera.create_preview_configuration()
+            preview_config = self.camera.create_preview_configuration(sensor={"output_size": self.resolution, "bit_depth": self.framerate})
             self.camera.configure(preview_config)
-        
             #self.camera.start_preview(Preview.QT)
             self.camera.start()
+            
             if(self.record):
                 fourcc = cv2.VideoWriter_fourcc(*'XVID')
                 self.out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame size
-            # self.rawCapture = Picamera2.capture_array("raw")
-            # self.stream = self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True)
-            # Other camera setup code...
-            # start the thread to read frames from the video stream
             self.x_max = self.camera.resolution[0]
             self.y_max = self.camera.resolution[1]
             time.sleep(1)
@@ -66,7 +65,9 @@ class NutsTracker:
             try:
                 # Capture frame from the camera
                 self.frame = self.camera.capture_array()
-                frameHSV = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+                frameRGB = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                self.frame = apply_median_filter(frameRGB, kernel_size=3)
+                frameHSV = cv2.cvtColor(self.frame, cv2.COLOR_RGB2HSV)
                 mask = cv2.inRange(frameHSV, self.default_lower, self.default_upper)
                 contornos, _ = cv2.findContours(
                     mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -100,13 +101,13 @@ class NutsTracker:
                 if a == 0:
                     self.x  = self.objX
                     self.y = self.objY
-                if self.show:
-                    cv2.imshow('frame', self.frame)
+                #if self.show:
+                    #cv2.imshow('frame', self.frame)
+                    #if cv2.waitKey(1) & 0xFF == ord('s'):
+                    #    break 
                 if self.record:
                     self.out.write(self.frame)
-                    
-                if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break 
+            
             except Exception as e:
                 print(f"Error processing frame: {e}")   
         if self.tracking:
@@ -122,5 +123,5 @@ class NutsTracker:
         self.camera.close()
         if(self.record):
             self.out.release()
-
-        cv2.destroyAllWindows()
+        #if(self.show):
+            #cv2.destroyAllWindows()
