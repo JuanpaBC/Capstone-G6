@@ -114,6 +114,8 @@ class NutsTracker:
                     #if cv2.waitKey(1) & 0xFF == ord('s'):
                     #    break 
                 if self.record:
+                    cv2.line(self.frame, (self.objX - 50, 0), (self.objX - 50, self.objY), (0, 0, 255), 2)
+                    cv2.line(self.frame, (self.objX + 50, 0), (self.objX + 50, self.objY), (0, 0, 255), 2)
                     self.outRaw.write(frameRGBMedian)
                     self.outMask.write(self.frame)
             

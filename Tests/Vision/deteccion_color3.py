@@ -105,7 +105,7 @@ except FileNotFoundError:
     upper = np.array([96, 255, 255], np.uint8)
 
 # Replace camera capture with video file capture
-video_file_path = 'IMG_1806.mp4'   # Change this to your video file path
+video_file_path = 'test12412421.avi'   # Change this to your video file path
 cap = cv2.VideoCapture(video_file_path)
 
 ret, frame = cap.read()
@@ -175,6 +175,7 @@ try:
         if not paused:
             ret, frame = cap.read()
         if ret == True:
+            w, h = frame.shape[1], frame.shape[0]
             #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             #frame = apply_median_filter(frame, kernel_size=3)
             frameHSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
@@ -203,7 +204,11 @@ try:
                     if mostrar_contorno:
                         cv2.drawContours(
                             frame, [nuevoContorno], 0, (0, 255, 0), 3)
+                    #dibujar lineas de tolerancia
                     print(f"Distancia con respecto al centro de la imagen: {x - frame.shape[1]*0.5}")
+
+            cv2.line(frame, (w//2 - 50, 0), (w//2 - 50, h), (0, 0, 255), 2)
+            cv2.line(frame, (w//2 + 50, 0), (w//2 + 50, h), (0, 0, 255), 2)
             # cv2.imshow('maskAzul', mask)
             # cv2.imshow('maskVerde', mask)
             cv2.imshow('frame', frame)
