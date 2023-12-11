@@ -3,7 +3,7 @@
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
 
-#define ServoPin 8 // Servo pin
+#define servoPin 12 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 5
@@ -314,5 +314,13 @@ void loop()
     if(scooping == 0){
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
+      checkDistance();
+      if(distance < 9 || distance > 30){
+        scooping = 1;
+      }
+    } else{
+      WriteDriverVoltageA(0);
+      WriteDriverVoltageB(0);
+      scoop();
     }
 }

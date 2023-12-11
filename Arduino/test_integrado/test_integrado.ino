@@ -33,7 +33,7 @@ int angle = 0; // Defines an integer
 int d = 23; // mm of wheel
 int ratio_ruedas = 500;
 int steps = 12;
-int state = 10;
+int state = 3;
 int delay_time = 2000;
 float vueltas_ruedasA;
 float vueltas_ruedasB;
@@ -70,12 +70,12 @@ void Avanzar(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(ENA, pwm_ref);
+    analogWrite(ENA, 130);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, pwm_ref);
+    analogWrite(ENB, 130);
 }
 
 // ************** Función para parar ***************
@@ -100,12 +100,12 @@ void Atras(int pwm_ref)
     // Retroceder motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(ENA, pwm_ref);
+    analogWrite(ENA, 130);
 
     // Retroceder motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(ENB, pwm_ref);
+    analogWrite(ENB, 130);
 }
 
 // ************** Función para doblar a la derecha ***************
@@ -115,12 +115,12 @@ void Doblar_derecha(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(ENA, 255);
+    analogWrite(ENA, 180);
     
     // Avanzar motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(ENB, 100);
+    analogWrite(ENB, 150);
 }
 
 // ************** Función para doblar a la izquierda ***************
@@ -130,12 +130,12 @@ void Doblar_izquierda(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(ENA,100);
+    analogWrite(ENA,150);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, 255);
+    analogWrite(ENB, 180);
 }
 
 void doEncoderA1()
@@ -322,7 +322,7 @@ void loop()
         if ((micros() - ref_time) * 0.000001 > 3)
         {
           Parar();
-          state = 7;
+          state = 9;
           digitalWrite(redLed, HIGH);
         }
         break;
