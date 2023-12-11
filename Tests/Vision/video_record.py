@@ -1,5 +1,5 @@
 from picamera2.encoders import H264Encoder
-from picamera2 import Picamera2, Preview
+from picamera2 import Picamera2
 import time
 
 picam2 = Picamera2()
@@ -7,7 +7,7 @@ preview_config = picam2.create_preview_configuration(sensor={"output_size": (202
 picam2.configure(preview_config)
 encoder = H264Encoder(bitrate=10000000)
 output = "test.h264"
-picam2.start_preview(Preview.QTGL)
+#picam2.start_preview(Preview.QTGL)
 picam2.start_recording(encoder, output)
 time.sleep(30)
 picam2.stop_recording()
