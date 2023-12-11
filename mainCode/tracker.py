@@ -28,10 +28,10 @@ class NutsTracker:
         self.y_max = resolution[1]
         self.detect = 0
         self.obj = [0, 0]
-        self.min_area = 10000
-        self.max_area = 69120
-        self.default_lower = np.array([29,40,54])
-        self.default_upper = np.array([105,208,255])
+        self.min_area = 4732
+        self.max_area = 14598
+        self.default_lower = np.array([7,40,164])
+        self.default_upper = np.array([110, 173, 255])
         self.detect = 0
         self.objX = resolution[0]/2
         self.objY = resolution[1]
