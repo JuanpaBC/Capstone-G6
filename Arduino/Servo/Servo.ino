@@ -4,7 +4,7 @@
 #define echoPin 2 // EchoSensor
 
 
-#define servoPin 8
+#define servoPin 12
 
 
 Servo servo; //Defines the object Servo of type(class) Servo
@@ -14,28 +14,50 @@ int MAXANG = 170;
 int MINANG = 0;
 int duration;
 int distance = 10;
-
+int scooping = 0;
 int scoopRespawn = 1500;
-void scoop()
-{
-    Serial.println("scooping");
-     // The following for loop runs till the servo is turned till 180degrees
-    for (angle = MINANG; angle < MAXANG; angle++)
-    {
-        servo.write(angle);
-        delay(SCOOPDELAY);
-    }
-    delay(500);
+unsigned long lastScoopMillestone = 0;
 
-    // The following for loop goes back till servo is turned till 10degrees
-    for (angle = MAXANG; angle > MINANG; angle--)
-    {
-        servo.write(angle);
-        delay(SCOOPDELAY);
+unsigned long currentMillis = 0;
+void scoop() {
+    // The following loop runs until the servo is turned to 180 degrees
+    // Serial.println("scooping");
+    currentMillis = millis();
+    if(scooping == 1){
+      if (currentMillis - lastScoopMillestone >= SCOOPDELAY) {
+          angle++;
+          servo.write(angle);
+          lastScoopMillestone = currentMillis;
+      }
+      if(angle >= MAXANG){
+        scooping = 2;
+        lastScoopMillestone = currentMillis;
+      }
     }
-    delay(500);
+    if(scooping == 2){
+      if (currentMillis - lastScoopMillestone >= 500) {
+        scooping = 3;
+        lastScoopMillestone = currentMillis;
+      }
+    }
+    if(scooping == 3){
+      currentMillis = millis();
+      if (currentMillis - lastScoopMillestone >= SCOOPDELAY) {
+          angle--;
+          servo.write(angle);
+          lastScoopMillestone = currentMillis;
+      }
+      if(angle <= MINANG){
+        scooping = 4;
+        lastScoopMillestone = currentMillis;
+      }
+    }
+    if(scooping == 4){
+      if (currentMillis - lastScoopMillestone >= 500) {
+        scooping = 0;
+      }
+    }
 }
-
 
 void checkDistance()
 {
@@ -57,29 +79,25 @@ void checkDistance()
 }
 
 void setup() {
-  servo.attach(servoPin, 771, 2740);
+  servo.attach(servoPin, 400, 2740);
   servo.write(MINANG);
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
 
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
-int hola =0;
 
 void loop() { 
-  scoop();
-  //checkDistance();
   Serial.println(distance);
-  if(distance < 9 ){
-    hola = hola + 1;
-    if(hola > 10){
-      //scoop();
-      delay(1000);
+  if(scooping == 0){
+    checkDistance();
+    if(distance < 9 || distance > 30){
+      scooping =1;
     }
   }
   else{
-    hola = 0;
+    scoop();
   }
 }

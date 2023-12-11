@@ -63,10 +63,11 @@ float L_robot = (320-26)/2;
 int instruction = -1;
 
 int duration;
-int distance;
+int distance = 12;
 
 unsigned long startScoop = 0;
 unsigned long currentMillis = 0;
+unsigned long lastScoopMillestone = 0;
 
 int agarro_castana = 0;
 int scooping = 0;
@@ -92,31 +93,43 @@ void checkDistance()
 }
 
 void scoop() {
-    // The following loop runs until the servo is turned to 180 degrees
-    // Serial.println("scooping");
+    currentMillis = millis();
     if(scooping == 1){
-      currentMillis = millis();
-      if (currentMillis - startScoop >= SCOOPDELAY) {
+      if (currentMillis - lastScoopMillestone >= SCOOPDELAY) {
           angle++;
           servo.write(angle);
-          startScoop = currentMillis;
+          lastScoopMillestone = currentMillis;
       }
       if(angle >= MAXANG){
         scooping = 2;
+        lastScoopMillestone = currentMillis;
       }
     }
     if(scooping == 2){
+      if (currentMillis - lastScoopMillestone >= 500) {
+        scooping = 3;
+        lastScoopMillestone = currentMillis;
+      }
+    }
+    if(scooping == 3){
       currentMillis = millis();
-      if (currentMillis - startScoop >= SCOOPDELAY) {
+      if (currentMillis - lastScoopMillestone >= SCOOPDELAY) {
           angle--;
           servo.write(angle);
-          startScoop = currentMillis;
+          lastScoopMillestone = currentMillis;
       }
       if(angle <= MINANG){
-        scooping = 3;
+        scooping = 4;
+        lastScoopMillestone = currentMillis;
+      }
+    }
+    if(scooping == 4){
+      if (currentMillis - lastScoopMillestone >= 1500) {
+        scooping = 0;
       }
     }
 }
+
 
 int sign(int x) {
   if (x > 0) {
@@ -292,7 +305,7 @@ void setup()
     pinMode(BIN2, OUTPUT);
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
-    servo.attach(servoPin, 771, 2740);
+    servo.attach(servoPin, 400, 2740);
     servo.write(angle);
 }
 
@@ -314,8 +327,8 @@ void loop()
     if(scooping == 0){
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
-      checkDistance();
       if(distance < 9 || distance > 30){
+        distance = 12;
         scooping = 1;
       }
     } else{
