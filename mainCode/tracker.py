@@ -20,7 +20,7 @@ class NutsTracker:
         self.frame = None
         self.stopped = False
         self.tracking = True
-        self.show = False
+        self.show = True
         self.mostrar_contorno = True
         self.x = -1
         self.y = -1
@@ -39,7 +39,7 @@ class NutsTracker:
     
     def initiateVideo(self):
         print("Initiating video.")
-        try:
+        if(True):
             self.camera = Picamera2()  # Change this line
             if(self.show):
                 self.camera.start_preview(Preview.QTGL)
@@ -51,14 +51,11 @@ class NutsTracker:
             if(self.record):
                 fourcc = cv2.VideoWriter_fourcc(*'XVID')
                 self.outRaw = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame siz
-                fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                self.outMask = cv2.VideoWriter('output2.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame sizee
-            self.x_max = self.camera.resolution[0]
-            self.y_max = self.camera.resolution[1]
+                fourcc2 = cv2.VideoWriter_fourcc(*'XVID')
+                self.outMask = cv2.VideoWriter('output2.avi', fourcc2, 20.0, (640, 480))  # Adjust fps and frame sizee
+            self.x_max = self.resolution[0]
+            self.y_max = self.resolution[1]
             time.sleep(1)
-
-        except Exception as e:
-            print(f"Error initializing camera: {e}")
         
     def track(self):
         # keep looping infinitely until the thread is stopped
@@ -114,8 +111,8 @@ class NutsTracker:
                     #if cv2.waitKey(1) & 0xFF == ord('s'):
                     #    break 
                 if self.record:
-                    cv2.line(self.frame, (self.objX - 50, 0), (self.objX - 50, self.objY), (0, 0, 255), 2)
-                    cv2.line(self.frame, (self.objX + 50, 0), (self.objX + 50, self.objY), (0, 0, 255), 2)
+                    #cv2.line(self.frame, (self.objX - 50, 0), (self.objX - 50, self.objY), (0, 0, 255), 2)
+                    #cv2.line(self.frame, (self.objX + 50, 0), (self.objX + 50, self.objY), (0, 0, 255), 2)
                     self.outRaw.write(frameRGBMedian)
                     self.outMask.write(self.frame)
             

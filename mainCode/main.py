@@ -22,6 +22,7 @@ if __name__ == '__main__':
             if(tracker.detect == 1):
                 x = tracker.x
                 y = tracker.y
+                print(x,y)
                 PWMA, PWMB = control.update(0.1, x, y)
                 print(f"PWMA: {PWMA}, PWMB: {PWMB}")
                 msg = f"{PWMA},{PWMB}\n"
