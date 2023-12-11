@@ -82,6 +82,9 @@ class NutsTracker:
                     if (area >= self.min_area) and (self.max_area >= area):
                         detectIt = detectIt + 1
                         a = 1
+                        M = cv2.moments(c)
+                        if M["m00"] == 0:
+                            M["m00"] = 1
                         x = int(M["m10"] / M["m00"])
                         y = int(M["m01"] / M["m00"])
                         dist = (x - self.obj[0])**2 + (y - self.obj[1])**2
@@ -89,9 +92,6 @@ class NutsTracker:
                             min_dist = dist
                             self.x = x
                             self.y = y
-                            M = cv2.moments(c)
-                            if M["m00"] == 0:
-                                M["m00"] = 1
                             cv2.circle(self.frame, (self.x, self.y), 7, (255, 0, 255), -1)
                             font = cv2.FONT_HERSHEY_SIMPLEX
                             cv2.putText(self.frame, '{},{}'.format(
