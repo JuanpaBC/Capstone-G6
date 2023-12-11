@@ -9,6 +9,6 @@ encoder = H264Encoder(bitrate=10000000)
 output = "test.h264"
 picam2.start_preview(Preview.QTGL)
 picam2.start_recording(encoder, output)
-time.sleep(10)
+time.sleep(30)
 picam2.stop_recording()
 picam2.stop_preview()
