@@ -17,7 +17,7 @@ class PID:
         self.x_target = x_target
         self.y_target = y_target
         self.tolangle = 7.5
-        self.tolpixels = 70
+        self.tolpixels = 50
         self.errA = 0
         self.errB = 0
 
