@@ -3,7 +3,7 @@
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
 
-#define ServoPin 8 // Servo pin
+#define ServoPin 12 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15
@@ -40,7 +40,7 @@ float vueltas_ruedasB;
 float avance;
 int enable = 0;
 bool pressed = true;
-int PWM = 73;
+int PWM = 110;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
 int co = 0;
@@ -207,7 +207,7 @@ void setup()
 
     pinMode(redLed, OUTPUT);
 
-    servo.attach(ServoPin); // States that the servo is attached to pin 5
+    servo.attach(servoPin, 771, 2740);
     servo.write(angle);
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A
