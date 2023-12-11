@@ -2,7 +2,6 @@ import math
 
 class PID:
     def __init__(self, kp=0.0, ki=0.0, kd=0.0, kpt=0.0, kit=0.0, kdt=0.0, x_target=0.0, y_target=0.0):
-        self.clas = "PID"
         self.kp = kp
         self.ki = ki
         self.kd = kd
@@ -21,7 +20,7 @@ class PID:
         self.tolpixels = 70
         self.errA = 0
         self.errB = 0
-        
+
     def theta_error(self, x, y):
         # Returns the error in the angle theta
         if(self.y_target - y) == 0:
@@ -78,11 +77,11 @@ class PID:
             self.previous_errorB = self.errB
 
             if self.theta_err > 0:
-                outputA = 1.5 *outputA
-                outputB = outputB *0.9
+                outputA = 4/3 *outputA
+                outputB = outputB
             else:
-                outputA = outputA * 0.8
-                outputB = outputB * 1
+                outputA = outputA
+                outputB = outputB * 4/3
             # Limitar la salida
             #if outputA > 0:
             #    outputA = min(outputA, 255)
@@ -96,14 +95,26 @@ class PID:
             #elif outputB < 0:
             #    outputB = max(outputB, -255)
             #    outputB = min(outputB, -120)
-            if outputA > 0:
-                outputA = min(outputA, 255)
-                outputA = max(outputA, 150)
-            if outputB > 0:
-                outputB = min(outputB, 255)
-                outputB = max(outputB, 150)
-            if outputA < 0:
-                outputA = max(outputA, -255)
-            if outputB < 0:
-                outputB = max(outputB, -255)
+            #if outputA > 0:
+            #    outputA = min(outputA, 255)
+            #    outputA = max(outputA, 150)
+            #if outputB > 0:
+            #    outputB = min(outputB, 255)
+            #    outputB = max(outputB, 150)
+            #if outputA < 0:
+            #    outputA = max(outputA, -255)
+            #if outputB < 0:
+            #    outputB = max(outputB, -255)
         return int(round(outputA)), int(round(outputB))
+
+
+
+if __name__ == '__main__':
+    print("Starting...")
+    control = PID(6, 0.03, 0.1, 150, 0.03, 0.5, 2028/2, 1520)
+
+    while True:
+        outputA, outputB = control.update(0.1, 1800,100)
+        print(control.theta_err)
+        print(control.lineal_err)
+        print(f"OutputA: {outputA} OutputB: {outputB}")
