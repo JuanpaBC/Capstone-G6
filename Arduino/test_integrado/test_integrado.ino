@@ -3,7 +3,7 @@
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
 
-#define ServoPin 8 // Servo pin
+#define ServoPin 12 // Servo pin
 #define MAXANG 180 // Servo máx angle
 #define MINANG 0 // Servo min angle
 #define SCOOPDELAY 15
@@ -40,7 +40,7 @@ float vueltas_ruedasB;
 float avance;
 int enable = 0;
 bool pressed = true;
-int PWM = 73;
+int PWM = 110;
 volatile long encoderAPos = 0;
 volatile long encoderBPos = 0;
 int co = 0;
@@ -115,12 +115,12 @@ void Doblar_derecha(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, HIGH);
     digitalWrite(AIN2, LOW);
-    analogWrite(ENA, 255);
+    analogWrite(ENA, pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, HIGH);
     digitalWrite(BIN2, LOW);
-    analogWrite(ENB, 100);
+    analogWrite(ENB, pwm_ref);
 }
 
 // ************** Función para doblar a la izquierda ***************
@@ -130,12 +130,12 @@ void Doblar_izquierda(int pwm_ref)
     // Avanzar motor A
     digitalWrite(AIN1, LOW);
     digitalWrite(AIN2, HIGH);
-    analogWrite(ENA,100);
+    analogWrite(ENA,pwm_ref);
     
     // Avanzar motor B
     digitalWrite(BIN1, LOW);
     digitalWrite(BIN2, HIGH);
-    analogWrite(ENB, 255);
+    analogWrite(ENB, pwm_ref);
 }
 
 void doEncoderA1()
@@ -207,7 +207,7 @@ void setup()
 
     pinMode(redLed, OUTPUT);
 
-    servo.attach(ServoPin); // States that the servo is attached to pin 5
+    servo.attach(servoPin, 771, 2740);
     servo.write(angle);
 
     attachInterrupt(digitalPinToInterrupt(AC1), doEncoderA1, CHANGE); // encoder 0 PIN A

@@ -105,7 +105,7 @@ except FileNotFoundError:
     upper = np.array([96, 255, 255], np.uint8)
 
 # Replace camera capture with video file capture
-video_file_path = 'test12412421.avi'   # Change this to your video file path
+video_file_path = 'test.h264'   # Change this to your video file path
 cap = cv2.VideoCapture(video_file_path)
 
 ret, frame = cap.read()
