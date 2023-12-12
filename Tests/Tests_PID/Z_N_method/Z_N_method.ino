@@ -203,21 +203,22 @@ void readSerialPort()
     Serial.flush();
   }
 }
+// Function to get a specific value from a comma-separated string
+String getValue(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = { 0, -1 };
+    int maxIndex = data.length() - 1;
 
-void stringSplitter(char *msg, float *left_rpm, float *right_rpm) {
-  char *token = strtok(msg, ",");
-  for (int i = 0; i < 2; i++) {
-    float floatValue = atof(token); // Use atof for floating-point values
-    switch (i) {
-      case 0:
-        *left_rpm = floatValue;
-        break;
-      case 1:
-        *right_rpm = floatValue;
-        break;
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i + 1 : i;
+        }
     }
-    token = strtok(NULL, ",");
-  }
+
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
 int sign(int x) {
@@ -249,11 +250,25 @@ void setup() {
 
 }
 
-void loop() {
-  readSerialPort();
-  if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-    stringSplitter(msg, &kp_A, &RPM_A_ref, &kp_B, &RPM_B_ref);
-    msg[0] == '\0';
+void loop()
+{
+  if (Serial.available() > 0)
+  {
+    String data = Serial.readStringUntil('\n');
+    Serial.print("Valores RPM: ");
+
+    // Convert the string values to integers
+    kp_A = getValue(data, ',', 0).toInt();
+    RPM_A_ref = getValue(data, ',', 1).toInt();
+    kp_B = getValue(data, ',', 2).toInt();
+    RPM_B_ref = getValue(data, ',', 3).toInt();
+    Serial.print(kp_A);
+    Serial.print(" | ");
+    Serial.print(RPM_A);
+    Serial.print(',');
+    Serial.print(kp_B);
+    Serial.print(" | ");
+    Serial.println(RPM_B);
   }
   if ((millis() - t_prev)>= 100) {
       t = millis();
@@ -272,32 +287,34 @@ void loop() {
       //PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
-        Serial.print(t);
-        //Serial.print(", ");
-        //Serial.print("refA: ");
-        //Serial.print(RPM_A_ref);
-        // Serial.print("EncoderCountA: ");
-        // Serial.print(EncoderCountA);
-        //Serial.print(" | RPMA: ");
-        //Serial.print(RPM_A);
-        Serial.print(", ");
+      Serial.print(t);
+      //Serial.print(", ");
+      Serial.print("refA: ");
+      Serial.print(RPM_A_ref);
+      // Serial.print("EncoderCountA: ");
+      // Serial.print(EncoderCountA);
+      Serial.print(" | RPMA: ");
+      Serial.print(RPM_A);
+      Serial.print(" | kp_A: ");
+      Serial.print(kp_A);
+      Serial.print(", ");
 
-        Serial.print("refB: ");
-        Serial.print(RPM_B_ref);
-        // Serial.print("EncoderCountB: ");
-        // Serial.print(EncoderCountB);
-        Serial.print(" | RPM_B: ");
-        Serial.print(RPM_B);
-        Serial.print(" | kp_B: ");
-        Serial.print(kp_B);
-        Serial.println("");
+      Serial.print("refB: ");
+      Serial.print(RPM_B_ref);
+      // Serial.print("EncoderCountB: ");
+      // Serial.print(EncoderCountB);
+      Serial.print(" | RPM_B: ");
+      Serial.print(RPM_B);
+      Serial.print(" | kp_B: ");
+      Serial.print(kp_B);
+      Serial.println("");
 
-        ThetaA_prev = ThetaA;
-        ThetaB_prev = ThetaB;
-        t_prev = t;
-        inte_prev_A = inte_A;
-        inte_prev_B = inte_B;
-        e_prev_A = e_A;
-        e_prev_B = e_B;
+      ThetaA_prev = ThetaA;
+      ThetaB_prev = ThetaB;
+      t_prev = t;
+      inte_prev_A = inte_A;
+      inte_prev_B = inte_B;
+      e_prev_A = e_A;
+      e_prev_B = e_B;
     }
 }
