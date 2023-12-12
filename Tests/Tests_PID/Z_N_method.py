@@ -4,7 +4,7 @@ import time
 import threading
 import matplotlib.pyplot as plt
 import csv
-last_data = ''
+last_data = 't: 0.0, refA:0.0 | RPMA: 0.0 | kparec: 0.0, refB:0.0 | RPMB: 0.0 | kparec: 0.0'
 
 class Communication:
     def __init__(self) -> None:
@@ -15,13 +15,14 @@ class Communication:
 
     def begin(self):
         self.arduino = serial.Serial(self.target_L, self.baud, timeout=1)
+        self.arduino.flush()
         time.sleep(0.1)
         if self.arduino.isOpen():
             print("{} conectado!".format(self.arduino.port))
             time.sleep(1)
 
     def read_and_print_messages(self):
-        if self.arduino.isOpen():
+        if (self.arduino.isOpen()):
             message = self.arduino.readline().decode('utf-8').rstrip()
             if message:
                 self.data = message
@@ -40,14 +41,6 @@ class Communication:
             self.arduino.write(mensaje.encode('utf-8'))
             time.sleep(0.1)
 
-
-coms = Communication()
-coms.begin()
-
-read_messages_thread = threading.Thread(target=coms.read_and_print_messages)
-read_messages_thread.daemon = True
-read_messages_thread.start()
-
 running = True
 sendIt = True
 duration = 0.01  # Duration in seconds for each set of messages
@@ -65,6 +58,8 @@ RPMB_values = []
 RPMref_values = []
 v_ref = str(250)
 i  = 0
+coms = Communication()
+coms.begin()
 try:
     with open(csv_file_path, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
@@ -93,6 +88,7 @@ try:
                     i = i+1
                 coms.comunicacion(
                     f"{str(round(KpB, 3))},{v_ref},{str(round(KpB, 3))},{v_ref}")
+                coms.read_and_print_messages()
 
 except KeyboardInterrupt:
     print("Data collection interrupted.")
@@ -104,4 +100,4 @@ plt.plot(KpB_values, RPMB_values, label='RPMB vs KpB')
 plt.xlabel('KpB')
 plt.ylabel('RPMB')
 plt.legend()
-plt.save("zn.jpg")
+plt.savefig("zn.jpg")

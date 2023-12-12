@@ -28,8 +28,8 @@
 Servo servo; //Defines the object Servo of type(class) Servo
 int angle = 0; // Defines an integer
 // ************ DEFINITIONS A************
-float kp_A = 0.001;
-float ki_A = 0.00005;
+float kp_A = 0.01;
+float ki_A = 0;
 float kd_A = 0;
 
 // ************ DEFINITIONS A************
@@ -255,20 +255,34 @@ void loop()
   if (Serial.available() > 0)
   {
     String data = Serial.readStringUntil('\n');
-    Serial.print("Valores RPM: ");
-
+    
     // Convert the string values to integers
     kp_A = getValue(data, ',', 0).toInt();
     RPM_A_ref = getValue(data, ',', 1).toInt();
     kp_B = getValue(data, ',', 2).toInt();
     RPM_B_ref = getValue(data, ',', 3).toInt();
-    Serial.print(kp_A);
-    Serial.print(" | ");
+
+    Serial.print(t);
+    Serial.print(", ");
+    Serial.print("refA: ");
+    Serial.print(RPM_A_ref);
+    // Serial.print("EncoderCountA: ");
+    // Serial.print(EncoderCountA);
+    Serial.print(" | RPMA: ");
     Serial.print(RPM_A);
-    Serial.print(',');
+    Serial.print(" | kp_A: ");
+    Serial.print(kp_A);
+    Serial.print(", ");
+
+    Serial.print("refB: ");
+    Serial.print(RPM_B_ref);
+    // Serial.print("EncoderCountB: ");
+    // Serial.print(EncoderCountB);
+    Serial.print(" | RPM_B: ");
+    Serial.print(RPM_B);
+    Serial.print(" | kp_B: ");
     Serial.print(kp_B);
-    Serial.print(" | ");
-    Serial.println(RPM_B);
+    Serial.println("");
   }
   if ((millis() - t_prev)>= 100) {
       t = millis();
@@ -287,27 +301,6 @@ void loop()
       //PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
-      Serial.print(t);
-      //Serial.print(", ");
-      Serial.print("refA: ");
-      Serial.print(RPM_A_ref);
-      // Serial.print("EncoderCountA: ");
-      // Serial.print(EncoderCountA);
-      Serial.print(" | RPMA: ");
-      Serial.print(RPM_A);
-      Serial.print(" | kp_A: ");
-      Serial.print(kp_A);
-      Serial.print(", ");
-
-      Serial.print("refB: ");
-      Serial.print(RPM_B_ref);
-      // Serial.print("EncoderCountB: ");
-      // Serial.print(EncoderCountB);
-      Serial.print(" | RPM_B: ");
-      Serial.print(RPM_B);
-      Serial.print(" | kp_B: ");
-      Serial.print(kp_B);
-      Serial.println("");
 
       ThetaA_prev = ThetaA;
       ThetaB_prev = ThetaB;
