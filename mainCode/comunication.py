@@ -22,7 +22,6 @@ class Communication:
                 self.data = message
                 time.sleep(1)
                 print(f'Recibiendo mensaje: {message}')
-                # self.arduino.flush()
             else:
                 print(message)
                 print("No se recibio nada")
