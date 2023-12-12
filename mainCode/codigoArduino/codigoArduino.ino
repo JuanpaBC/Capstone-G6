@@ -1,4 +1,6 @@
 #include <Servo.h> //Imports the library Servo
+#include <HCSR04.h>
+
 //GeeKee CeeBee
 #define trigPin 3 // TriggerSensor
 #define echoPin 2 // EchoSensor
@@ -73,6 +75,7 @@ int agarro_castana = 0;
 int scooping = 0;
 
 
+HCSR04 hc(trigPin, echoPin); 
 void checkDistance()
 {
     // Clear the trigPin by setting it LOW:
@@ -124,7 +127,8 @@ void scoop() {
       }
     }
     if(scooping == 4){
-      if (currentMillis - lastScoopMillestone >= 1500) {
+      if (currentMillis - lastScoopMillestone >= 2000) {
+        distance = 12;
         scooping = 0;
       }
     }
@@ -305,10 +309,12 @@ void setup()
     pinMode(BIN2, OUTPUT);
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
+    digitalWrite(trigPin, LOW);
     servo.attach(servoPin, 400, 2740);
     servo.write(angle);
 }
 
+unsigned long lastUS;
 void loop()
 {
     if (Serial.available() > 0)
@@ -323,10 +329,17 @@ void loop()
         Serial.print(',');
         Serial.println(PWM_B_val);
     }
+    else{
+      if(millis() - lastUS > 100){
+        distance = hc.dist();
+        lastUS = millis();
+      }
+    }
     
     if(scooping == 0){
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
+      Serial.println(distance);
       if(distance < 9 || distance > 30){
         distance = 12;
         scooping = 1;
