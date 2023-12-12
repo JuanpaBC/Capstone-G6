@@ -46,9 +46,9 @@ int PWM_B_val;
 float Dist_B;
 
 // ************ DEFINITIONS A************
-float kp_A = 1.24;
+float kp_A = 1.20;
 float ki_A = 0.02;
-float kd_A = 10.8;
+float kd_A = 10.6;
 
 // ************ DEFINITIONS A************
 float kp_B = 1;
@@ -62,8 +62,8 @@ float e_B, e_prev_B;
 float inte_B, inte_prev_B;
 int dt;
 
-int RPM_A_ref = 90;
-int RPM_B_ref = 90;
+int RPM_A_ref = 0;
+int RPM_B_ref = 0;
 float Pos_x, Pos_y;
 float Vel_lin, Vel_x, Vel_y;
 float Vel_ang, Theta;
@@ -254,6 +254,22 @@ int sign(int x) {
     return 0;
   }
 }
+String getValue(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = { 0, -1 };
+    int maxIndex = data.length() - 1;
+
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i + 1 : i;
+        }
+    }
+
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
 
 void setup() {
   Serial.begin(baud);
@@ -274,6 +290,14 @@ void setup() {
   servo.write(angle);
 }
 void loop() {
+  if (Serial.available() > 0)
+  {
+      String data = Serial.readStringUntil('\n');
+
+      // Convert the string values to integers
+      RPM_A_ref = getValue(data, ',', 0).toInt();
+      RPM_B_ref = getValue(data, ',', 1).toInt();
+  }
   if(scooping == 0){
     if ((millis() - t_prev)>= 100) {
         distance = hc.dist();
