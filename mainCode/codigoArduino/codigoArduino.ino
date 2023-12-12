@@ -337,8 +337,23 @@ void loop()
     }
     
     if(scooping == 0){
+      
+      ThetaA = EncoderCountA;
+      ThetaB = EncoderCountB;
+      dt = t - t_prev; // [s]
+      RPM_A = 1000 * (ThetaA - ThetaA_prev)/ dt * 60.0 / NFactor;
+      RPM_B = 1000 * (ThetaB - ThetaB_prev)/ dt * 60.0 / NFactor;
+      e_A = RPM_A_ref - RPM_A;
+      e_B = RPM_B_ref - RPM_B;
+      inte_A = inte_prev_A + (dt * (e_A + e_prev_A) / 2);
+      inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
+      PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
+      PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
+      ThetaA_prev = ThetaA;
+      ThetaB_prev = ThetaB;
+      t_prev = t;
       Serial.println(distance);
       if(distance < 9 || distance > 30){
         distance = 12;
