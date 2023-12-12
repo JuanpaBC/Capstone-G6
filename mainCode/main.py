@@ -15,7 +15,7 @@ if __name__ == '__main__':
     coms = Communication()
     coms.begin()
     print("Coms Started!")
-    control = PID(6, 0.03, 0.1, 295, 5, 5,round(tracker.x_max/2), round(tracker.y_max))
+    control = PID(6, 0.03, 0.1, 230, 0.01, 0.1,round(tracker.x_max/2), round(tracker.y_max))
     print("Control Started!")
     try:
         while True:

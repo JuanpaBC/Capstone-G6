@@ -20,7 +20,7 @@ class NutsTracker:
         self.frame = None
         self.stopped = False
         self.tracking = True
-        self.show = True
+        self.show = False
         self.mostrar_contorno = True
         self.x = -1
         self.y = -1
@@ -28,7 +28,7 @@ class NutsTracker:
         self.y_max = resolution[1]
         self.detect = 0
         self.obj = [0, 0]
-        self.min_area = 4732
+        self.min_area = 600
         self.max_area = 14598
         self.default_lower = np.array([7,40,164])
         self.default_upper = np.array([110, 173, 255])
@@ -53,8 +53,9 @@ class NutsTracker:
                 self.outRaw = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))  # Adjust fps and frame siz
                 fourcc2 = cv2.VideoWriter_fourcc(*'XVID')
                 self.outMask = cv2.VideoWriter('output2.avi', fourcc2, 20.0, (640, 480))  # Adjust fps and frame sizee
-            self.x_max = self.resolution[0]
-            self.y_max = self.resolution[1]
+            self.frame = self.camera.capture_array()
+            self.x_max = self.frame.shape[0]
+            self.y_max = self.frame.shape[1]
             time.sleep(1)
         
     def track(self):
