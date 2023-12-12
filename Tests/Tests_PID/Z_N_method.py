@@ -25,7 +25,7 @@ class Communication:
             message = self.arduino.readline().decode('utf-8').rstrip()
             if message:
                 self.data = message
-                time.sleep(1)
+                time.sleep(0.1)
                 print(f'Recibiendo mensaje: {message}')
                 # self.arduino.flush()
             else:
@@ -59,7 +59,7 @@ csv_file_path = 'serial_data.csv'
 csv_header = ['Time', 'KpB', 'RPMB', 'BRPMref']
 
 # External variables
-KpB_valuesref = np.linspace(0.0, 0.3, 230).tolist()  # List of 100 values from 0.0 to 0.1
+KpB_valuesref = np.linspace(0.0, 5.0, 230).tolist()  # List of 100 values from 0.0 to 0.1
 KpB_values = []
 RPMB_values = []
 RPMref_values = []
