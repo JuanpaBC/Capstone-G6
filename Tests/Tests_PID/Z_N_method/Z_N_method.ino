@@ -252,7 +252,7 @@ void setup() {
 void loop() {
   readSerialPort();
   if(msg[0] != '\0' && msg[0] != ' ' && msg != NULL) {
-    stringSplitter(msg, &kp_B, &RPM_B_ref);
+    stringSplitter(msg, &kp_A, &RPM_A_ref, &kp_B, &RPM_B_ref);
     msg[0] == '\0';
   }
   if ((millis() - t_prev)>= 100) {
@@ -268,8 +268,8 @@ void loop() {
       inte_B = inte_prev_B + (dt * (e_B + e_prev_B) / 2);
       PWM_A_val = int(kp_A * e_A + ki_A * inte_A + (kd_A * (e_A - e_prev_A) / dt));
       PWM_B_val = int(kp_B * e_B + ki_B * inte_B + (kd_B * (e_B - e_prev_B) / dt));
-      PWM_A_val = CheckPWM(PWM_A_val);
-      PWM_B_val = CheckPWM(PWM_B_val);
+      //PWM_A_val = CheckPWM(PWM_A_val);
+      //PWM_B_val = CheckPWM(PWM_B_val);
       WriteDriverVoltageA(PWM_A_val);
       WriteDriverVoltageB(PWM_B_val);
         Serial.print(t);

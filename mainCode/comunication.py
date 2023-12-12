@@ -20,7 +20,7 @@ class Communication:
             message = self.arduino.readline().decode('utf-8').rstrip()
             if message:
                 self.data = message
-                time.sleep(1)
+                time.sleep(0.1)
                 print(f'Recibiendo mensaje: {message}')
             else:
                 print(message)
