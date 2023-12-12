@@ -297,6 +297,19 @@ void loop() {
       // Convert the string values to integers
       RPM_A_ref = getValue(data, ',', 0).toInt();
       RPM_B_ref = getValue(data, ',', 1).toInt();
+
+      Serial.print(t);
+      Serial.print(", ");
+      Serial.print("PosX: ");
+      Serial.print(Pos_x);
+      Serial.print(", ");
+
+      Serial.print("POSY: ");
+      Serial.print(Pos_y);
+      //Serial.print("POSY: ");
+      //Serial.print(Pos_y);
+      Serial.print(", Theta");
+      Serial.println(Theta*180/pi);
   }
   if(scooping == 0){
     if ((millis() - t_prev)>= 100) {
@@ -334,18 +347,6 @@ void loop() {
         Vel_y = Vel_lin * sin(Theta);
         Pos_x = Pos_x + Vel_x*dt/1000;
         Pos_y = Pos_y + Vel_y*dt/1000;
-        Serial.print(t);
-        Serial.print(", ");
-        Serial.print("PosX: ");
-        Serial.print(Pos_x);
-        Serial.print(", ");
-  
-        Serial.print("POSY: ");
-        Serial.print(Pos_y);
-        //Serial.print("POSY: ");
-        //Serial.print(Pos_y);
-        Serial.print(", Theta");
-        Serial.println(Theta*180/pi);
   
         
         ThetaA_prev = ThetaA;
@@ -356,5 +357,11 @@ void loop() {
     WriteDriverVoltageA(0);
     WriteDriverVoltageB(0);
     scoop();
+    inte_A = 0;
+    inte_B = 0;
+    ThetaA_prev = EncoderCountA;
+    ThetaB_prev = EncoderCountB;
+    t_prev = millis();
+    
   }
 }
