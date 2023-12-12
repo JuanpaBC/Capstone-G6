@@ -79,7 +79,8 @@ try:
                     break
                 if (len(coms.data.split(',')) >= 2 and coms.data != last_data):
                     # Extract KpB, RPMB, RPMref from the updated 'data'
-                    Time, Bparts = coms.data.split(',')
+                    Time, Aparts, Bparts = coms.data.split(',')
+                    refA, RPMA, kparec = Aparts.split('|')
                     refB, RPMB, kpbrec = Bparts.split('|')
                         # Assuming KpB is the third part of bData
                     # Save data to lists
